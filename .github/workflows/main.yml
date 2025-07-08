@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
     - run: |
         sudo add-apt-repository ppa:git-core/ppa
         sudo apt-get install git-svn
