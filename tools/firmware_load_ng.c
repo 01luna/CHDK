@@ -2117,7 +2117,7 @@ int insn_match_find_next(firmware *fw, iter_state_t *is, int max_insns, const in
     return 0;
 }
 
-// iterate is until current has matched any of the provided matches N times or until max_insns reached
+// iterate is until current instruction has matched any of the provided matches N times or max_insns reached
 int insn_match_find_nth(firmware *fw, iter_state_t *is, int max_insns, int num_to_match, const insn_match_t *match)
 {
     int i=0;
@@ -2134,6 +2134,7 @@ int insn_match_find_nth(firmware *fw, iter_state_t *is, int max_insns, int num_t
         for(m=match;m->id != ARM_INS_ENDING;m++) {
             if(insn_match(is->insn,m)) {
                 num_matched++;
+                break;
             }
         }
         if(num_matched == num_to_match) {
