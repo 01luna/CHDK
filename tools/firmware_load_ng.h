@@ -647,6 +647,13 @@ int insn_match_seq(firmware *fw, iter_state_t *is, const insn_match_t *match);
 // find next matching sequence starting within max_insns
 int insn_match_find_next_seq(firmware *fw, iter_state_t *is, int max_insns, const insn_match_t *match);
 
+/*
+backtrack through history finding the Nth instruction matching any of the provided matches
+affects fw->is, does not affect is_init
+max_insns excludes current instruction, so 1 means the previous instruction
+*/
+int insn_match_find_hist_nth(firmware *fw, iter_state_t *is_init, int max_insns, int num_to_match, const insn_match_t *match);
+
 #define FIND_CONST_REF_MATCH_ANY 0
 #define FIND_CONST_REF_MATCH_SEQ 1
 /*

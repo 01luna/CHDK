@@ -2165,6 +2165,73 @@ int insn_match_find_next_seq(firmware *fw, iter_state_t *is, int max_insns, cons
     return 0;
 }
 
+/*
+backtrack through history finding the Nth instruction matching any of the provided matches
+affects fw->is, does not affect is_init
+max_insns excludes current instruction, so 1 means the previous instruction
+*/
+int insn_match_find_hist_nth(firmware *fw, iter_state_t *is_init, int max_insns, int num_to_match, const insn_match_t *match)
+{
+    int i=1;
+    int num_matched=0;
+    // requesting > hist size is a bug, always fail
+    if(max_insns >= ADR_HIST_SIZE) {
+        fprintf(stderr,"%"PRIx64" insn_match_find_hist_nth max_insns %d >= ADR_HIST_MAX %d\n",is_init->insn->address,max_insns, ADR_HIST_SIZE);
+        return 0;
+    }
+    // if you want to check the current instruction, just use normal match functions
+    if(max_insns < 1) {
+        fprintf(stderr,"%"PRIx64" insn_match_find_hist_nth max_insns %d < 1\n",is_init->insn->address,max_insns);
+        return 0;
+    }
+    // requesting 0 matches probably a mistake
+    if(num_to_match < 1) {
+        fprintf(stderr,"%"PRIx64" insn_match_find_hist_nth max_insns %d < 1\n",is_init->insn->address,num_to_match);
+        return 0;
+    }
+    // count includes current instruction. Calling with empty history probably a mistake
+    if(is_init->ah.count <= 1) {
+        fprintf(stderr,"%"PRIx64" insn_match_find_hist_nth empty history\n",is_init->insn->address);
+        return 0;
+    }
+    // history size is unpredictable, clamp if not available
+    if(is_init->ah.count - 1 < max_insns) {
+        // printf("%"PRIx64" insn_match_find_hist_nth clamp max_insns %d %d\n",is_init->insn->address,max_insns,is_init->ah.count-1);
+        max_insns = is_init->ah.count-1;
+    }
+    // no match is possible within available history
+    if(num_to_match > max_insns) {
+        // printf("%"PRIx64" insn_match_find_hist_nth num_to_match %d > max_insns %d\n",is_init->insn->address,num_to_match,max_insns);
+        return 0;
+    }
+
+    while(i <= max_insns) {
+        // thumb state comes from hist
+        if(!fw_disasm_iter_single(fw,adr_hist_get(&is_init->ah,i))) {
+            // break on non-code
+            // fprintf(stderr,"insn_match_find_hist_nth: history disasm failed 0x%"PRIx64"\n",fw->is->insn->address);
+            return 0;
+        }
+        // printf("%"PRIx64" insn_match_find_hist_nth %d %s %s\n",fw->is->insn->address,i,fw->is->insn->mnemonic,fw->is->insn->op_str);
+
+        const insn_match_t *m;
+        // check matches
+        for(m=match;m->id != ARM_INS_ENDING;m++) {
+            if(insn_match(fw->is->insn,m)) {
+                num_matched++;
+                // printf("%"PRIx64" insn_match_find_hist_nth match\n",fw->is->insn->address);
+                break;
+            }
+        }
+        if(num_matched == num_to_match) {
+            return 1;
+        }
+        i++;
+    }
+    // limit hit
+    return 0;
+}
+
 
 // Search the firmware for something. The desired matching is performed using the supplied 'func' function.
 // Continues searching until 'func' returns non-zero - then returns 1

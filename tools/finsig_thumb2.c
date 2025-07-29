@@ -5525,33 +5525,73 @@ int sig_match_named_next_func(firmware *fw, iter_state_t *is, sig_rule_t *rule)
     return 0;
 }
 
-// Match function using string
+// macros for sig_match_func_using_str
+// backtrack instruction count - matches ADR_HIST_SIZE 64
+#define SIG_USESTR_BACK_BITS 6
+#define SIG_USESTR_BACK_MASK ((1 << SIG_USESTR_BACK_BITS) - 1)
+#define SIG_USESTR_FWD_SHIFT 6
+// more than 7 instructions before push should be very rare
+#define SIG_USESTR_FWD_BITS 3
+#define SIG_USESTR_FWD_MASK (((1 << SIG_USESTR_FWD_BITS) - 1) << SIG_USESTR_FWD_SHIFT)
+
+// macros for rule definitions
+#define SIG_USESTR_BACK(x) ((x) & SIG_USESTR_BACK_MASK)
+#define SIG_USESTR_FWD(x) (((x) << SIG_USESTR_FWD_SHIFT) & SIG_USESTR_FWD_MASK)
+#define SIG_USESTR(back_insns,fwd_insns) (SIG_USESTR_BACK(back_insns)|SIG_USESTR_FWD(fwd_insns))
+
+
+// Match function using string, use SIG_USESTR* macros to define forward/backward limits
+// backtracking assumes function begins with push including R4
+// forward assumes string ref is first instruction
+// Either may not be true!
 int sig_match_func_using_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
     uint32_t str_adr = find_str_bytes_main_fw(fw,rule->ref_name);
     if(!str_adr) {
-        printf("sig_match_func_using_str: %s failed to find ref %s\n",rule->name,rule->ref_name);
+        if(!(rule->flags & SIG_OPTIONAL)) {
+            printf("sig_match_func_using_str: %s failed to find ref %s\n",rule->name,rule->ref_name);
+        }
         return  0;
     }
+
+    // TODO may want flags to allow others
+    const insn_match_t match_push_r4[]={
+        {MATCH_INS(PUSH,   MATCH_OPCOUNT_ANY),  {MATCH_OP_REG(R4)}},
+        {ARM_INS_ENDING}
+    };
+    uint32_t back_count = rule->param & SIG_USESTR_BACK_MASK;
+    uint32_t fwd_count = (rule->param & SIG_USESTR_FWD_MASK) >> SIG_USESTR_FWD_SHIFT;
 
     disasm_iter_init(fw,is,(ADR_ALIGN4(str_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
     // Find references to string
     while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,str_adr+SEARCH_NEAR_REF_RANGE)) {
         // string reference address
         uint32_t ref_adr = is->insn->address | is->thumb;
-        // back up a bit
-        fw_disasm_iter_single(fw,ref_adr - rule->param);
-        int i;
-        // Search for push {r4,...} instruction
-        for (i=0; i<rule->param; i+=1) {
-            if (fw->is->insn->id == ARM_INS_PUSH && fw->is->insn->detail->arm.operands[0].reg == ARM_REG_R4) {
-                // Push instruction address
-                uint32_t f_adr = (fw->is->insn->address) | fw->is->thumb;
-                // If push is after string reference use string reference address as function start
-                if (f_adr > ref_adr) f_adr = ref_adr;
-                return save_sig_with_j(fw,rule->name,f_adr);
+
+        // search forward, for patterns like ldr rn,#str ... push ...
+        uint32_t i;
+        if(fwd_count) {
+            fw_disasm_iter_single(fw,ref_adr);
+            for(i=0; i<fwd_count; i++) {
+                fw_disasm_iter(fw);
+                // printf("%"PRIx64" sig_match_func_using_str: %s fwd %d %s %s\n",fw->is->insn->address, rule->name,i,fw->is->insn->mnemonic,fw->is->insn->op_str);
+
+                // TODO should have match / break on instruction unlikely here
+                if(insn_match(fw->is->insn,match_push_r4)) {
+                    // printf("sig_match_func_using_str: forward match %s\n",rule->name);
+                    // assume function starts with string ref
+                    // NOTE might not be true, could load other consts first!
+                    return save_sig_with_j(fw,rule->name, ref_adr);
+                }
             }
-            fw_disasm_iter(fw);
+        }
+        if(back_count) {
+            // printf("%"PRIx64" sig_match_func_using_str: %s back %d\n",is->insn->address,rule->name,back_count);
+            // TODO functions may start with ldr, mov etc before push (e.g. ExpCtrlTool_StopContiAE on some d7)
+            if(insn_match_find_hist_nth(fw,is,back_count,1,match_push_r4)) {
+                // printf("sig_match_func_using_str: back match %s\n",rule->name);
+                return save_sig_with_j(fw,rule->name,(fw->is->insn->address) | fw->is->thumb);
+            }
         }
     }
     return 0;
@@ -6002,10 +6042,13 @@ sig_rule_t sig_rules_main[]={
 
 {sig_match_named,   "err_init_task",    "init_task_error" },
 
-{sig_match_func_using_str,  "EnterToCompensationEVF",   "ExpOn",        8 },
-{sig_match_func_using_str,  "ExitFromCompensationEVF",  "ExpOff",       8 },
-{sig_match_func_using_str,  "ExpCtrlTool_StartContiAE", "StartContiAE", 30 },
-{sig_match_func_using_str,  "ExpCtrlTool_StopContiAE",  "StopContiAE",  28 },
+// either push, ldr or ldr, ldr, push)
+{sig_match_func_using_str,  "EnterToCompensationEVF",   "ExpOn",        SIG_USESTR(1,2) },
+{sig_match_func_using_str,  "ExitFromCompensationEVF",  "ExpOff",       SIG_USESTR(1,2) },
+// search back for push
+{sig_match_func_using_str,  "ExpCtrlTool_StartContiAE", "StartContiAE", SIG_USESTR_BACK(13) },
+// TODO some d7 cams have ldr before push, but fail to match for other reasons
+{sig_match_func_using_str,  "ExpCtrlTool_StopContiAE",  "StopContiAE",  SIG_USESTR_BACK(13) },
 {sig_match_init_sd_io_funcs,"init_sd_io_funcs",         "\nStartDiskboot\n",   SIG_NEAR_BEFORE(7,2) },
 {sig_match_sd_io_func,   "WriteSDCard",                 "init_sd_io_funcs", 0x54 }, // WriteSDCard is at 0x54 for all known d6/d7 firmware
 {sig_match_sd_io_func,   "ReadSDCard",                  "init_sd_io_funcs", 0x50 },
