@@ -28,6 +28,16 @@
                                 | (((n)<<SIG_NEAR_COUNT_SHIFT)&SIG_NEAR_COUNT_MASK))
 #define SIG_NEAR_BEFORE(max_insns,n) (SIG_NEAR_AFTER(max_insns,n)|SIG_NEAR_REV)
 
+// generic param bits for specifying which memory regions to search
+// currently supported by
+#define SIG_SEARCH_SHIFT 24
+#define SIG_SEARCH_ROM (SEARCH_F_ROM_CODE << SIG_SEARCH_SHIFT) // search string in romcode (default if no others specified)
+#define SIG_SEARCH_RAM (SEARCH_F_RAM_CODE << SIG_SEARCH_SHIFT) // search string in ramcode
+#define SIG_SEARCH_TCM (SEARCH_F_TCM_CODE << SIG_SEARCH_SHIFT) // search string in ramcode
+#define SIG_SEARCH_MASK (0x7 << SIG_SEARCH_SHIFT)
+// convert SIG_SEARCH bits to SEARCH_F bits, default to main ROM if not set
+#define SIG_SEARCH_GET_F(param) (((param) & SIG_SEARCH_MASK)?(((param) & SIG_SEARCH_MASK)>> SIG_SEARCH_SHIFT):SEARCH_F_ROM_CODE)
+
 #define SIG_STRCALL_ARG_MASK    0x3
 #define SIG_STRCALL_ARG(arg_num) (arg_num)
 #define SIG_STRCALL_TYPE_MASK  0xc
@@ -5101,11 +5111,13 @@ int sig_match_rom_ptr_get(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 // modifies is and potentially fw->is
 uint32_t find_call_near_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
+    uint32_t search_flags = SIG_SEARCH_GET_F(rule->param);
+
     uint32_t str_adr;
     if(rule->param & SIG_NEAR_INDIRECT) {
         str_adr = find_str_bytes(fw,rule->ref_name); // indirect string could be in data area
     } else {
-        str_adr = find_str_bytes_main_fw(fw,rule->ref_name); // direct string must be near actual code
+        str_adr = find_next_str_bytes_code(fw, rule->ref_name, search_flags, 0); // direct string must be near actual code
     }
     if(!str_adr) {
         printf("find_call_near_str: %s failed to find ref %s\n",rule->name,rule->ref_name);
@@ -5116,6 +5128,7 @@ uint32_t find_call_near_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
     // TODO only looks for first ptr
     if(rule->param & SIG_NEAR_INDIRECT) {
         // printf("find_call_near_str: %s str 0x%08x\n",rule->name,str_adr);
+        // TODO should honor search ranges
         search_adr=find_u32_adr_range(fw,str_adr,fw->rom_code_search_min_adr,fw->rom_code_search_max_adr);
         if(!search_adr) {
             printf("find_call_near_str: %s failed to find indirect ref %s\n",rule->name,rule->ref_name);
@@ -5132,7 +5145,7 @@ uint32_t find_call_near_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 
     int max_insns=rule->param&SIG_NEAR_OFFSET_MASK;
     int n=(rule->param&SIG_NEAR_COUNT_MASK)>>SIG_NEAR_COUNT_SHIFT;
-    //printf("find_call_near_str: %s max_insns %d n %d %s\n",rule->name,max_insns,n,(rule->param & SIG_NEAR_REV)?"rev":"fwd");
+    // printf("find_call_near_str: %s @ 0x%08x max_insns %d n %d %s\n",rule->name,search_adr,max_insns,n,(rule->param & SIG_NEAR_REV)?"rev":"fwd");
     // TODO should handle multiple instances of string
     disasm_iter_init(fw,is,(ADR_ALIGN4(search_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
     while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,search_adr+SEARCH_NEAR_REF_RANGE)) {
@@ -5538,22 +5551,16 @@ int sig_match_named_next_func(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 #define SIG_USESTR_BACK(x) ((x) & SIG_USESTR_BACK_MASK)
 #define SIG_USESTR_FWD(x) (((x) << SIG_USESTR_FWD_SHIFT) & SIG_USESTR_FWD_MASK)
 #define SIG_USESTR(back_insns,fwd_insns) (SIG_USESTR_BACK(back_insns)|SIG_USESTR_FWD(fwd_insns))
-
-// flags
-#define SIG_USESTR_SEARCH_SHIFT 16
-#define SIG_USESTR_ROM (SEARCH_F_ROM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in romcode (default if no others specified)
-#define SIG_USESTR_RAM (SEARCH_F_RAM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in ramcode
-#define SIG_USESTR_TCM (SEARCH_F_TCM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in ramcode
-#define SIG_USESTR_SEARCH_MASK 0x70000
+// bits starting at SIG_SEARCH_SHIFT used for memory range selection with SIG_SEARCH_RAM etc
 
 // Match function using string, use SIG_USESTR* macros to define forward/backward limits
-// and which regions to search. If no regions are given, main ROM is searched
+// and SIG_NEAR_* to specify memory ranges
 // backtracking assumes function begins with push starting with R4
 // forward assumes string ref is first instruction of function
 // Either may not be true!
 int sig_match_func_using_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
-    uint32_t search_flags = (rule->param & SIG_USESTR_SEARCH_MASK) >> SIG_USESTR_SEARCH_SHIFT;
+    uint32_t search_flags = SIG_SEARCH_GET_F(rule->param);
     // none specified, search main ROM
     if(!search_flags) {
         search_flags = SEARCH_F_ROM_CODE;
