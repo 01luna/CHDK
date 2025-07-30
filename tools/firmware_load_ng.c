@@ -266,8 +266,8 @@ uint32_t find_next_str_bytes_adr_ranges(firmware *fw, const char *str, uint32_t 
             if(!rng) {
                 return 0;
             }
-            rng++;
             adr = rng->start;
+            rng++;
         }
         // TODO would be nice to be able to restrict ROM to main_fw
         // searching whole ROM and copied regions doesn't make much sense
