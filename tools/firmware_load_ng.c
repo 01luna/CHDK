@@ -225,6 +225,88 @@ uint32_t find_str_bytes(firmware *fw, const char *str)
     return find_next_str_bytes(fw,str,fw->base);
 }
 
+// find a string within adr_range containing start adr
+uint32_t find_next_str_bytes_adr_range(firmware *fw, const char *str, uint32_t adr)
+{
+    if(!adr) {
+        fprintf(stderr,"find_next_str_bytes_adr_range: null adr\n");
+        return 0;
+    }
+    adr_range_t *rng = adr_get_range(fw,adr);
+    if(!rng) {
+        fprintf(stderr,"find_next_str_bytes_adr_range: adr 0x%x out of range\n", adr);
+        return 0;
+    }
+    // find bytes using ROM address mapping
+    uint32_t start_adr = adr2romadr(fw, adr);
+    uint32_t max_adr = adr2romadr(fw, rng->start + rng->bytes - 1);
+    uint32_t r = find_next_bytes_range(fw,str,strlen(str)+1,start_adr,max_adr);
+    if(r) {
+        return romadr2adr(fw,r);
+    }
+    return r;
+}
+
+// find a string within the specified adr ranges, using ADR_RANGE_M_* defines
+// if adr is 0, start with first matching range
+uint32_t find_next_str_bytes_adr_ranges(firmware *fw, const char *str, uint32_t range_match, uint32_t adr)
+{
+    adr_range_t *rng = NULL;
+    if(adr) {
+        rng = adr_get_range(fw,adr);
+        if(!rng) {
+            fprintf(stderr,"find_next_str_bytes_adr_ranges: adr 0x%x out of range\n", adr);
+            return 0;
+        }
+    }
+    do {
+        if(!adr) {
+            rng = adr_range_find_next(fw,rng,range_match);
+            // no more ranges matching criteria
+            if(!rng) {
+                return 0;
+            }
+            rng++;
+            adr = rng->start;
+        }
+        // TODO would be nice to be able to restrict ROM to main_fw
+        // searching whole ROM and copied regions doesn't make much sense
+        // but if search ram and ROM, probably want ROM last
+        adr = find_next_str_bytes_adr_range(fw,str,adr);
+    } while(!adr);
+    return adr;
+}
+
+// find a string in possibly code ranges defined by SEARCH_F_* bits in search_ranges
+// if adr is 0, start with first matching range
+uint32_t find_next_str_bytes_code(firmware *fw, const char *str, uint32_t search_ranges, uint32_t adr)
+{
+    // TODO ugly flag remapping
+    // ROM handled seperately because we want to do it last, and respect main code region
+    uint32_t range_match = 0;
+    if(search_ranges & SEARCH_F_RAM_CODE) {
+        range_match |= ADR_RANGE_M_RAM_CODE;
+    }
+    if(search_ranges & SEARCH_F_TCM_CODE) {
+        range_match |= ADR_RANGE_M_TCM_CODE;
+    }
+    uint32_t str_adr = 0;
+    if(range_match) {
+        // if adr is in ROM, this will return 0 since not include in range_match
+        str_adr = find_next_str_bytes_adr_ranges(fw, str, range_match, adr);
+        if(str_adr) {
+            return str_adr;
+        }
+    }
+    if(!(search_ranges & SEARCH_F_ROM_CODE)) {
+        return 0;
+    }
+    if(!adr) {
+        adr = fw->rom_code_search_min_adr;
+    }
+    return find_next_str_bytes_main_fw(fw,str,adr);
+}
+
 int isASCIIstring(firmware *fw, uint32_t adr)
 {
     unsigned char *p = (unsigned char*)adr2ptr_with_data(fw, adr);
@@ -255,6 +337,51 @@ adr_range_t *adr_get_range(firmware *fw, uint32_t adr)
             return r;
         }
         r++;
+    }
+    return NULL;
+}
+
+// return whether the range matches the give ADR_RANGE_M bits
+int adr_range_match(adr_range_t *r, uint32_t range_match)
+{
+    if(!r) {
+        return 0;
+    }
+    if(r->type == ADR_RANGE_ROM && (range_match & ADR_RANGE_M_ROM)) {
+        return 1;
+    }
+    if(r->type == ADR_RANGE_INIT_DATA && (range_match & ADR_RANGE_M_RAM_DATA)) {
+        return 1;
+    }
+    if(r->type == ADR_RANGE_RAM_CODE) {
+        if((r->flags & ADR_RANGE_FL_EVEC) && (range_match & ADR_RANGE_M_EVEC)) {
+            return 1;
+        }
+        if((r->flags & ADR_RANGE_FL_TCM) && (range_match & ADR_RANGE_M_TCM_CODE)) {
+            return 1;
+        }
+        // ram code only
+        if(range_match & ADR_RANGE_M_RAM_CODE) {
+            if(r->flags & (ADR_RANGE_FL_EVEC | ADR_RANGE_FL_TCM)) {
+                return 0;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// return next address range matching critera, starting from rng, or first if null
+adr_range_t *adr_range_find_next(firmware *fw, adr_range_t *start, uint32_t range_match)
+{
+    adr_range_t *r;
+    if(!start) {
+        start = &fw->adr_ranges[0];
+    }
+    for(r=start;r->type != ADR_RANGE_INVALID;r++) {
+        if(adr_range_match(r,range_match)) {
+            return r;
+        }
     }
     return NULL;
 }
@@ -304,6 +431,38 @@ uint8_t* adr2ptr_with_data(firmware *fw, uint32_t adr)
         default:
             return NULL;
     }
+}
+
+// return ROM address of address that may be in a remapped adr_range
+uint32_t adr2romadr(firmware *fw, uint32_t adr)
+{
+    adr_range_t *r = adr_get_range(fw,adr);
+    if(r) {
+        return (adr - r->start) + r->src_start;
+    }
+    return 0;
+}
+
+// return the copied address of a ROM address in the source area, or 0 if out of range
+// ROM addresses are returned as-is
+uint32_t romadr2adr(firmware *fw, uint32_t adr)
+{
+    int i;
+    adr_range_t *r=fw->adr_ranges;
+    for(i=0;i<fw->adr_range_count;i++,r++) {
+        // ROM contains all other source regions, handle after others
+        if(r->type == ADR_RANGE_ROM) {
+            continue;
+        }
+        if(adr >= r->src_start && adr < r->src_start + r->bytes) {
+            return adr - r->src_start + r->start;
+        }
+    }
+    // if adr is a valid ROM address, return as is
+    if(adr_get_range_type(fw, adr) == ADR_RANGE_ROM) {
+        return adr;
+    }
+    return 0;
 }
 
 // return constant string describing type
@@ -2401,6 +2560,8 @@ void firmware_load(firmware *fw, const char *filename, uint32_t base_adr,int fw_
     findRanges(fw);
 
     fw->adr_range_count=0;
+    // ensure all are initialized to invalid
+    memset(&fw->adr_ranges,0,sizeof(fw->adr_ranges));
     // add ROM
     fw_add_adr_range(fw,fw->base, fw->base+fw->size8, fw->base, ADR_RANGE_ROM, ADR_RANGE_FL_NONE);
 

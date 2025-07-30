@@ -22,15 +22,28 @@
 
 #define ADR_IS_ALIGN4(x) (((x)&0x3)==0)
 
-// address regions
+// address range (main or copied region) types
 #define ADR_RANGE_INVALID   0
 #define ADR_RANGE_ROM       1
-#define ADR_RANGE_RAM_CODE  2
+#define ADR_RANGE_RAM_CODE  2 // any copied code
 #define ADR_RANGE_INIT_DATA 3
 
+// address range flags
 #define ADR_RANGE_FL_NONE   0
 #define ADR_RANGE_FL_TCM    1 // TCM
 #define ADR_RANGE_FL_EVEC   2 // exception vector
+
+// match bits for adr_range_find_next
+#define ADR_RANGE_M_ROM         0x01 // whole ROM, including source of copied
+#define ADR_RANGE_M_RAM_CODE    0x02 // only main RAM
+#define ADR_RANGE_M_TCM_CODE    0x04
+#define ADR_RANGE_M_EVEC        0x08
+#define ADR_RANGE_M_RAM_DATA    0x10
+
+// match bits find_next_str_bytes_code and possibly others
+#define SEARCH_F_ROM_CODE   0x01
+#define SEARCH_F_RAM_CODE   0x02
+#define SEARCH_F_TCM_CODE   0x04
 
 // Stores a range of valid data in the firmware dump (used to skip over empty blocks)
 typedef struct bufrange {
@@ -119,7 +132,7 @@ typedef struct {
 
     // address ranges for ROM and copied data
     int             adr_range_count;
-    adr_range_t     adr_ranges[FW_MAX_ADR_RANGES];
+    adr_range_t     adr_ranges[FW_MAX_ADR_RANGES+1]; // +1 to for terminator with type == ADR_RANGE_INVALID
 
     // convenience values to optimize code searching
     uint32_t        rom_code_search_min_adr; // minimum ROM address for normal code searches (i.e. firmware start)
@@ -141,8 +154,21 @@ uint8_t* adr2ptr(firmware *fw, uint32_t adr);
 // as above, but include initialized data area (NOTE may change on camera at runtime!)
 uint8_t* adr2ptr_with_data(firmware *fw, uint32_t adr);
 
+// return ROM address of address that may be in a remapped adr_range
+uint32_t adr2romadr(firmware *fw, uint32_t adr);
+
+// return the possibly copied address of a ROM address in the source area, or 0 if out of range
+// ROM addresses are returned as-is
+uint32_t romadr2adr(firmware *fw, uint32_t adr);
+
 // return constant string describing type
 const char* adr_range_type_str(int type);
+
+// return whether the range matches the give ADR_RANGE_M bits
+int adr_range_match(adr_range_t *r, uint32_t range_match);
+
+// return next address range matching critera, starting from rng, or first if null
+adr_range_t *adr_range_find_next(firmware *fw, adr_range_t *start, uint32_t range_match);
 
 // return constant string describing type + flags
 const char* adr_range_desc_str(adr_range_t *r);
@@ -201,6 +227,17 @@ uint32_t find_str_bytes_main_fw(firmware *fw, const char *str);
 
 // as find_next_str_bytes, first match
 uint32_t find_str_bytes(firmware *fw, const char *str);
+
+// find a string within adr_range containing start adr
+uint32_t find_next_str_bytes_adr_range(firmware *fw, const char *str, uint32_t adr);
+
+// find a string within the specified adr ranges, using ADR_RANGE_M_* defines
+// if adr is 0, start with first matching range
+uint32_t find_next_str_bytes_adr_ranges(firmware *fw, const char *str, uint32_t range_match, uint32_t adr);
+
+// find a string in possibly code ranges defined by SEARCH_F_* bits in search_ranges
+// if adr is 0, start with first matching range
+uint32_t find_next_str_bytes_code(firmware *fw, const char *str, uint32_t search_ranges, uint32_t adr);
 
 int isASCIIstring(firmware *fw, uint32_t adr);
 

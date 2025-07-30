@@ -5539,14 +5539,26 @@ int sig_match_named_next_func(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 #define SIG_USESTR_FWD(x) (((x) << SIG_USESTR_FWD_SHIFT) & SIG_USESTR_FWD_MASK)
 #define SIG_USESTR(back_insns,fwd_insns) (SIG_USESTR_BACK(back_insns)|SIG_USESTR_FWD(fwd_insns))
 
+// flags
+#define SIG_USESTR_SEARCH_SHIFT 16
+#define SIG_USESTR_ROM (SEARCH_F_ROM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in romcode (default if no others specified)
+#define SIG_USESTR_RAM (SEARCH_F_RAM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in ramcode
+#define SIG_USESTR_TCM (SEARCH_F_TCM_CODE << SIG_USESTR_SEARCH_SHIFT) // search string in ramcode
+#define SIG_USESTR_SEARCH_MASK 0x70000
 
 // Match function using string, use SIG_USESTR* macros to define forward/backward limits
-// backtracking assumes function begins with push including R4
-// forward assumes string ref is first instruction
+// and which regions to search. If no regions are given, main ROM is searched
+// backtracking assumes function begins with push starting with R4
+// forward assumes string ref is first instruction of function
 // Either may not be true!
 int sig_match_func_using_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
-    uint32_t str_adr = find_str_bytes_main_fw(fw,rule->ref_name);
+    uint32_t search_flags = (rule->param & SIG_USESTR_SEARCH_MASK) >> SIG_USESTR_SEARCH_SHIFT;
+    // none specified, search main ROM
+    if(!search_flags) {
+        search_flags = SEARCH_F_ROM_CODE;
+    }
+    uint32_t str_adr = find_next_str_bytes_code(fw, rule->ref_name, search_flags, 0);
     if(!str_adr) {
         if(!(rule->flags & SIG_OPTIONAL)) {
             printf("sig_match_func_using_str: %s failed to find ref %s\n",rule->name,rule->ref_name);
