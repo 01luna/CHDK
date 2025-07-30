@@ -180,6 +180,9 @@ uint32_t ptr2adr(firmware *fw, uint8_t *ptr);
 // return address range struct for adr, or NULL if not in known range
 adr_range_t *adr_get_range(firmware *fw, uint32_t adr);
 
+// round adr to fall within adr_range with 4 byte alignment
+uint32_t adr_range_clamp_adr_align4(adr_range_t *r, uint32_t adr);
+
 // return what kind of range adr is in
 int adr_get_range_type(firmware *fw, uint32_t adr);
 

@@ -27,9 +27,14 @@
 #define SIG_NEAR_AFTER(max_insns,n) (((max_insns)&SIG_NEAR_OFFSET_MASK) \
                                 | (((n)<<SIG_NEAR_COUNT_SHIFT)&SIG_NEAR_COUNT_MASK))
 #define SIG_NEAR_BEFORE(max_insns,n) (SIG_NEAR_AFTER(max_insns,n)|SIG_NEAR_REV)
+#define SIG_NEAR_GET_OFFSET(param) ((param)&SIG_NEAR_OFFSET_MASK)
+#define SIG_NEAR_GET_COUNT(param) (((param)&SIG_NEAR_COUNT_MASK)>>SIG_NEAR_COUNT_SHIFT)
 
 // generic param bits for specifying which memory regions to search
 // currently supported by
+//  sig_match_near_str / users of find_call_near_str (but not indirect)
+//  sig_match_str_arg_call / users of find_str_arg_call
+//  sig_match_func_using_str
 #define SIG_SEARCH_SHIFT 24
 #define SIG_SEARCH_ROM (SEARCH_F_ROM_CODE << SIG_SEARCH_SHIFT) // search string in romcode (default if no others specified)
 #define SIG_SEARCH_RAM (SEARCH_F_RAM_CODE << SIG_SEARCH_SHIFT) // search string in ramcode
@@ -38,13 +43,20 @@
 // convert SIG_SEARCH bits to SEARCH_F bits, default to main ROM if not set
 #define SIG_SEARCH_GET_F(param) (((param) & SIG_SEARCH_MASK)?(((param) & SIG_SEARCH_MASK)>> SIG_SEARCH_SHIFT):SEARCH_F_ROM_CODE)
 
+// param macros for sig_match_str_arg_call / users of find_str_arg_call
 #define SIG_STRCALL_ARG_MASK    0x3
 #define SIG_STRCALL_ARG(arg_num) (arg_num)
-#define SIG_STRCALL_TYPE_MASK  0xc
-#define SIG_STRCALL_TYPE_SHIFT 2
-#define SIG_STRCALL_CALL_IMM   0
-#define SIG_STRCALL_JMP_REG    4
-#define SIG_STRCALL_CALL_REG   8
+// TODO these should be a bitmask of call/jmp, imm/reg
+#define SIG_STRCALL_TYPE_SHIFT  2
+#define SIG_STRCALL_TYPE_MASK   (0x7 << SIG_STRCALL_TYPE_SHIFT)
+#define SIG_STRCALL_CALL_IMM        (0 << SIG_STRCALL_TYPE_SHIFT)
+#define SIG_STRCALL_JMP_IMM         (1 << SIG_STRCALL_TYPE_SHIFT)
+#define SIG_STRCALL_CALL_JMP_IMM    (2 << SIG_STRCALL_TYPE_SHIFT)
+#define SIG_STRCALL_JMP_REG         (4 << SIG_STRCALL_TYPE_SHIFT)
+#define SIG_STRCALL_CALL_REG        (5 << SIG_STRCALL_TYPE_SHIFT)
+
+#define SIG_STRCALL_GET_TYPE(param) ((param) & SIG_STRCALL_TYPE_MASK)
+#define SIG_STRCALL_GET_REG(param) (ARM_REG_R0 + ((param) & SIG_STRCALL_ARG_MASK))
 
 /* copied from finsig_dryos.c */
 char    out_buf[32*1024] = "";
@@ -2213,7 +2225,7 @@ int sig_match_readfastdir(firmware *fw, iter_state_t *is, sig_rule_t *rule)
         {MATCH_INS(CBZ, 2), {MATCH_OP_REG(R0), MATCH_OP_IMM_ANY}},
         {ARM_INS_ENDING}
     };
-    int max_insns=rule->param&SIG_NEAR_OFFSET_MASK;
+    int max_insns = SIG_NEAR_GET_OFFSET(rule->param);
     disasm_iter_init(fw,is,(ADR_ALIGN4(str_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
     while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,str_adr+SEARCH_NEAR_REF_RANGE)) {
         uint32_t ref_adr = iter_state_adr(is);
@@ -5143,12 +5155,21 @@ uint32_t find_call_near_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
         insn_match = match_bl_blximm;
     }
 
-    int max_insns=rule->param&SIG_NEAR_OFFSET_MASK;
-    int n=(rule->param&SIG_NEAR_COUNT_MASK)>>SIG_NEAR_COUNT_SHIFT;
+    int max_insns = SIG_NEAR_GET_OFFSET(rule->param);
+    int n = SIG_NEAR_GET_COUNT(rule->param);
+    // adjust limits to avoid going out of adr range
+    adr_range_t *rng = adr_get_range(fw,search_adr);
+    if(!rng) {
+        printf("find_call_near_str: %s invalid search_adr 0x%08x\n",rule->name,search_adr);
+        return 0;
+    }
+    uint32_t search_start = adr_range_clamp_adr_align4(rng, search_adr - SEARCH_NEAR_REF_RANGE);
+    uint32_t search_end = adr_range_clamp_adr_align4(rng, search_adr + SEARCH_NEAR_REF_RANGE);
+
     // printf("find_call_near_str: %s @ 0x%08x max_insns %d n %d %s\n",rule->name,search_adr,max_insns,n,(rule->param & SIG_NEAR_REV)?"rev":"fwd");
     // TODO should handle multiple instances of string
-    disasm_iter_init(fw,is,(ADR_ALIGN4(search_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
-    while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,search_adr+SEARCH_NEAR_REF_RANGE)) {
+    disasm_iter_init(fw,is,search_start | fw->thumb_default); // reset to a bit before where the string was found
+    while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,search_end)) {
         uint32_t ref_adr = is->insn->address | is->thumb;
         // bactrack looking for preceding call
         if(rule->param & SIG_NEAR_REV) {
@@ -5220,15 +5241,23 @@ int sig_match_near_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 // find call that recieves string sig->ref_name in reg
 // returns address w/thumb bit set according to current state of call instruction
 // modifies is and potentially fw->is
+// arg register and call type set by SIG_STRCALL_ macros
+// NOTE types are currently exclusive, not a bitmask
+// SIG_SEARCH_* can be used to search specific code regions
 // does not currently handle indirect refs
 // handles multiple instances of string
 uint32_t find_str_arg_call(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
-    arm_reg reg = ARM_REG_R0 + (rule->param & SIG_STRCALL_ARG_MASK);
-    int match_type = (rule->param & SIG_STRCALL_TYPE_MASK);
+    arm_reg reg = SIG_STRCALL_GET_REG(rule->param);
+    // TODO this should be a bitmask that builds match list
+    int match_type = SIG_STRCALL_GET_TYPE(rule->param);
     const insn_match_t *match;
     if(match_type == SIG_STRCALL_CALL_IMM) {
         match = match_bl_blximm;
+    } else if(match_type == SIG_STRCALL_JMP_IMM) {
+        match = match_b;
+    } else if(match_type == SIG_STRCALL_CALL_JMP_IMM) {
+        match = match_b_bl_blximm;
     } else if(match_type == SIG_STRCALL_JMP_REG) {
         match = match_bxreg;
     } else if(match_type == SIG_STRCALL_CALL_REG) {
@@ -5238,19 +5267,31 @@ uint32_t find_str_arg_call(firmware *fw, iter_state_t *is, sig_rule_t *rule)
         return 0;
     }
 
-    uint32_t str_adr = find_str_bytes_main_fw(fw,rule->ref_name); // direct string must be near actual code
+    uint32_t search_flags = SIG_SEARCH_GET_F(rule->param);
+    uint32_t str_adr = find_next_str_bytes_code(fw, rule->ref_name, search_flags, 0);
     if(!str_adr) {
-        printf("find_str_arg_call: %s failed to find ref %s\n",rule->name,rule->ref_name);
-        return 0;
+        if(!(rule->flags & SIG_OPTIONAL)) {
+            printf("find_str_arg_call: %s failed to find ref %s\n",rule->name,rule->ref_name);
+        }
+        return  0;
     }
 
     do {
-        disasm_iter_init(fw,is,(ADR_ALIGN4(str_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
-        uint32_t call_adr = find_const_ref_match(fw, is, SEARCH_NEAR_REF_RANGE*2, 8, reg, str_adr, match, FIND_CONST_REF_MATCH_ANY);
+        // adjust limits to avoid going out of adr range
+        adr_range_t *rng = adr_get_range(fw,str_adr);
+        if(!rng) {
+            printf("find_str_arg_call: %s invalid str_adr 0x%08x\n",rule->name,str_adr);
+            return 0;
+        }
+        uint32_t search_start = adr_range_clamp_adr_align4(rng, str_adr - SEARCH_NEAR_REF_RANGE);
+        uint32_t search_end = adr_range_clamp_adr_align4(rng, str_adr + SEARCH_NEAR_REF_RANGE);
+
+        disasm_iter_init(fw,is,search_start | fw->thumb_default); // reset to a bit before where the string was found
+        uint32_t call_adr = find_const_ref_match(fw, is, search_end - search_start, 8, reg, str_adr, match, FIND_CONST_REF_MATCH_ANY);
         if(call_adr) {
             return call_adr;
         }
-        str_adr = find_next_str_bytes_main_fw(fw,rule->ref_name, str_adr+strlen(rule->ref_name));
+        str_adr = find_next_str_bytes_code(fw, rule->ref_name, search_flags, str_adr + strlen(rule->ref_name));
     } while (str_adr);
     printf("find_str_arg_call: no match %s r%d\n",rule->name,reg-ARM_REG_R0);
     return 0;
@@ -5554,18 +5595,13 @@ int sig_match_named_next_func(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 // bits starting at SIG_SEARCH_SHIFT used for memory range selection with SIG_SEARCH_RAM etc
 
 // Match function using string, use SIG_USESTR* macros to define forward/backward limits
-// and SIG_NEAR_* to specify memory ranges
+// and SIG_SEARCH_* to specify memory ranges
 // backtracking assumes function begins with push starting with R4
 // forward assumes string ref is first instruction of function
 // Either may not be true!
 int sig_match_func_using_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
-    uint32_t search_flags = SIG_SEARCH_GET_F(rule->param);
-    // none specified, search main ROM
-    if(!search_flags) {
-        search_flags = SEARCH_F_ROM_CODE;
-    }
-    uint32_t str_adr = find_next_str_bytes_code(fw, rule->ref_name, search_flags, 0);
+    uint32_t str_adr = find_next_str_bytes_code(fw, rule->ref_name, SIG_SEARCH_GET_F(rule->param), 0);
     if(!str_adr) {
         if(!(rule->flags & SIG_OPTIONAL)) {
             printf("sig_match_func_using_str: %s failed to find ref %s\n",rule->name,rule->ref_name);
@@ -5581,9 +5617,18 @@ int sig_match_func_using_str(firmware *fw, iter_state_t *is, sig_rule_t *rule)
     uint32_t back_count = rule->param & SIG_USESTR_BACK_MASK;
     uint32_t fwd_count = (rule->param & SIG_USESTR_FWD_MASK) >> SIG_USESTR_FWD_SHIFT;
 
-    disasm_iter_init(fw,is,(ADR_ALIGN4(str_adr) - SEARCH_NEAR_REF_RANGE) | fw->thumb_default); // reset to a bit before where the string was found
+    // adjust limits to avoid going out of adr range
+    adr_range_t *rng = adr_get_range(fw,str_adr);
+    if(!rng) {
+        printf("sig_match_func_using_str: %s invalid str_adr 0x%08x\n",rule->name,str_adr);
+        return 0;
+    }
+    uint32_t search_start = adr_range_clamp_adr_align4(rng, str_adr - SEARCH_NEAR_REF_RANGE);
+    uint32_t search_end = adr_range_clamp_adr_align4(rng, str_adr + SEARCH_NEAR_REF_RANGE);
+
+    disasm_iter_init(fw,is,search_start | fw->thumb_default); // reset to a bit before where the string was found
     // Find references to string
-    while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,str_adr+SEARCH_NEAR_REF_RANGE)) {
+    while(fw_search_insn(fw,is,search_disasm_const_ref,str_adr,NULL,search_end)) {
         // string reference address
         uint32_t ref_adr = is->insn->address | is->thumb;
 

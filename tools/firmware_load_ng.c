@@ -341,6 +341,24 @@ adr_range_t *adr_get_range(firmware *fw, uint32_t adr)
     return NULL;
 }
 
+// round adr to fall within adr_range with 4 byte alignment
+uint32_t adr_range_clamp_adr_align4(adr_range_t *r, uint32_t adr)
+{
+    if(!r || r->type == ADR_RANGE_INVALID || r->bytes < 8) {
+        return 0;
+    }
+    adr = ADR_ALIGN4(adr);
+    if(adr < r->start) {
+        adr = r->start;
+        if((adr & ~3) != adr) {
+            adr = ADR_ALIGN4(adr) + 4;
+        }
+    } else if(adr > r->start + r->bytes - 1) {
+        adr = ADR_ALIGN4(r->start + r->bytes - 4);
+    }
+    return adr;
+}
+
 // return whether the range matches the give ADR_RANGE_M bits
 int adr_range_match(adr_range_t *r, uint32_t range_match)
 {
