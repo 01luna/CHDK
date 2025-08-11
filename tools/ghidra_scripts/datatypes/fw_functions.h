@@ -572,4 +572,27 @@ __stdcall int GetTimeFromRTC_FW(void);
 __stdcall int IsInvalidTime(int time);
 __stdcall void PauseTimeOfSystem(void);
 __stdcall void ResumeTimeOfSystem(void);
+
+/*
+low level SD functions
+
+sd_id is an integer which identifies SD slot/bus, used as an index
+into various arrays. Probably always 0 for SD card on powershots
+but SDIO wireless interfaces may also use the same functions
+On Digic 7, wireless appears to be connected SDIO on the "Lime" processor
+
+speed_id is an enum specifying pre-defined speed settings
+range 0-19 on Digic 6, 0-13 on Digic 7
+*/
+__stdcall int SD_ChgClkSpd(unsigned sd_id, unsigned speed_id);
+__stdcall int SD_GetTtlSect(unsigned sd_id, unsigned *ttlsect);
+__stdcall int SD_take_sem(unsigned sd_id);
+__stdcall int SD_give_sem(unsigned sd_id);
+__stdcall int SD_debug_log(int unk, const char *fmt,...);
+__stdcall int SD_error_log(int unk, const char *fmt,...);
+__stdcall int sddomChangeClockSpeed(unsigned sd_id, unsigned speed_id);
+__stdcall int SD_GetSpd(int sd_id, unsigned *unk1, unsigned *speed_id);
+__stdcall int SD_speed_id(int sd_id, unsigned *speed_id);
+__stdcall int SetSDClkFrequency(int sd_id, unsigned speed_id);
+
 #endif // FW_FUNCTIONS_H

@@ -568,6 +568,16 @@ sig_entry_t  sig_names[MAX_SIG_ENTRY] =
     { "GetEFLensFocusPositionWithLensCom", OPTIONAL|UNUSED },
 
     { "init_sd_io_funcs", OPTIONAL|UNUSED }, // helper for WriteSDCard
+    { "SD_ChgClkSpd", OPTIONAL|UNUSED }, // SD clock control
+    { "sddomChangeClockSpeed", OPTIONAL|UNUSED }, // lower level SD clock control
+    { "SD_GetTtlSect", OPTIONAL|UNUSED }, // Helper, total sectors from SD card, probably
+    { "SD_take_sem", OPTIONAL|UNUSED }, // function that takes sem associated with low level SD control
+    { "SD_give_sem", OPTIONAL|UNUSED }, // function that gives sem associated with low level SD control
+    { "SD_debug_log", OPTIONAL|UNUSED },// debug logging function often used by SD code
+    { "SD_error_log", OPTIONAL|UNUSED },// debug logging function often used by SD code for error conditions
+    { "SD_GetSpd", OPTIONAL|UNUSED },// gets SD speed id enum and another value
+    { "SD_get_speed_id", OPTIONAL|UNUSED },// gets SD speed id
+    { "SetSDClkFrequency", OPTIONAL|UNUSED },// sets MMIOs based on speed id
 
     {0,0,0},
 };
@@ -6116,6 +6126,39 @@ sig_rule_t sig_rules_main[]={
 {sig_match_init_sd_io_funcs,"init_sd_io_funcs",         "\nStartDiskboot\n",   SIG_NEAR_BEFORE(7,2) },
 {sig_match_sd_io_func,   "WriteSDCard",                 "init_sd_io_funcs", 0x54 }, // WriteSDCard is at 0x54 for all known d6/d7 firmware
 {sig_match_sd_io_func,   "ReadSDCard",                  "init_sd_io_funcs", 0x50 },
+// sx280 is different from other dry52, no trailing "s" on the logs
+{sig_match_func_using_str,  "SD_ChgClkSpd",     "ChgClkSpd(%d,%d)",     SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // sx280
+{sig_match_func_using_str,  "SD_ChgClkSpd",     "ChgClkSpd(%d,%d)s",    SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // other r52
+{sig_match_func_using_str,  "SD_ChgClkSpd",     "ChgClkSpd(%d,%d)s",    SIG_USESTR_BACK(11)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(53) }, // all others, not optional
+{sig_match_func_using_str,  "SD_GetTtlSect",    "GetTtlSect(%d)",       SIG_USESTR_BACK(7) |SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // sx280
+{sig_match_func_using_str,  "SD_GetTtlSect",    "GetTtlSect(%d)s",      SIG_USESTR_BACK(7) |SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // other r52
+{sig_match_func_using_str,  "SD_GetTtlSect",    "GetTtlSect(%d)s",      SIG_USESTR_BACK(10)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(53) }, // all others, not optional
+{sig_match_named,           "SD_take_sem",      "SD_ChgClkSpd",         SIG_NAMED_NTH(1,SUB), SIG_DRY_MAXP(59,3) },
+{sig_match_named,           "SD_give_sem",      "SD_GetTtlSect",        SIG_NAMED_NTH(3,SUB), SIG_DRY_MAXP(59,3) },
+{sig_match_named,           "SD_debug_log",     "SD_GetTtlSect",        SIG_NAMED_NTH(2,SUB), SIG_DRY_MAXP(59,3) },
+{sig_match_named,           "sddomChangeClockSpeed","SD_ChgClkSpd",     SIG_NAMED_NTH(3,SUB), SIG_DRY_MAXP(59,3) },
+// m100 (59p4, d7) adds an extra call to the start of a bunch of SD functions, sx730 (59p4, d6) does not
+// could use string_match_near but sx280 strings differ
+{sig_match_named,           "SD_take_sem",      "SD_ChgClkSpd",         SIG_NAMED_NTH(1,SUB), SIG_DRY_MINP(59,4), SIG_NO_D7 },
+{sig_match_named,           "SD_give_sem",      "SD_GetTtlSect",        SIG_NAMED_NTH(3,SUB), SIG_DRY_MINP(59,4), SIG_NO_D7 },
+{sig_match_named,           "SD_debug_log",     "SD_GetTtlSect",        SIG_NAMED_NTH(2,SUB), SIG_DRY_MINP(59,4), SIG_NO_D7 },
+{sig_match_named,           "sddomChangeClockSpeed","SD_ChgClkSpd",     SIG_NAMED_NTH(3,SUB), SIG_DRY_MINP(59,4), SIG_NO_D7 },
+// +1 to Nths for M100
+{sig_match_named,           "SD_take_sem",      "SD_ChgClkSpd",         SIG_NAMED_NTH(2,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
+{sig_match_named,           "SD_give_sem",      "SD_GetTtlSect",        SIG_NAMED_NTH(4,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
+{sig_match_named,           "SD_debug_log",     "SD_GetTtlSect",        SIG_NAMED_NTH(3,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
+{sig_match_named,           "sddomChangeClockSpeed","SD_ChgClkSpd",     SIG_NAMED_NTH(4,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
+// error messages changed
+{sig_match_str_arg_call,"SD_error_log", "%s(%d) MicroSeconds = 0 NG!\n",SIG_STRCALL_ARG(1)|SIG_STRCALL_JMP_IMM|SIG_SEARCH_ROM|SIG_SEARCH_RAM,SIG_DRY_MAX(55)},
+{sig_match_str_arg_call,"SD_error_log", "%s(%d) MicroSeconds = 0 ERR!\n",SIG_STRCALL_ARG(1)|SIG_STRCALL_JMP_IMM|SIG_SEARCH_ROM|SIG_SEARCH_RAM,SIG_DRY_MIN(56)},
+{sig_match_func_using_str,  "SD_GetSpd",     "GetSpd(%d)",     SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // sx280
+{sig_match_func_using_str,  "SD_GetSpd",     "GetSpd(%d)s",    SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // other r52
+{sig_match_func_using_str,  "SD_GetSpd",     "GetSpd(%d)s",    SIG_USESTR_BACK(11)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(53) }, // all others, not optional
+{sig_match_named,           "SD_get_speed_id","SD_GetSpd",     SIG_NAMED_NTH(3,SUB), SIG_DRY_MAXP(59,3) },
+{sig_match_named,           "SD_get_speed_id","SD_GetSpd",     SIG_NAMED_NTH(3,SUB), SIG_DRY_MINP(59,4), SIG_NO_D7 },
+{sig_match_named,           "SD_get_speed_id","SD_GetSpd",     SIG_NAMED_NTH(4,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
+{sig_match_near_str, "SetSDClkFrequency","%s(%d) SetSDClkFrequency() NG!\n",SIG_NEAR_BEFORE(4,1)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MAX(55) },
+{sig_match_near_str, "SetSDClkFrequency","%s(%d) SetSDClkFrequency() ERR!\n",SIG_NEAR_BEFORE(6,1)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(56) },
 
 {NULL},
 };
