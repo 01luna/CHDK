@@ -538,6 +538,7 @@
 0xe02b2a6f,LcdCon_ShowLcdParameter_FW
 0xe02b2a95,LcdCon_SaveLcdParameter_FW
 0xe02b34e7,task_BrtCalcTask
+0xe02bcb21,SD_get_speed_id
 0xe02d0ad9,task_ExpDrv
 0xe02d0ad9,task_ExpDrvTask
 0xe02e548f,EnableDebugLogMode_FW
@@ -555,6 +556,8 @@
 0xe02e6685,SetZoomSpeedCheckStopTime_FW
 0xe02e6693,SetZoomPermitTargetMaxSpeedPPS_FW
 0xe02e66ab,GetZoomActuatorCurrentPosition_FW
+0xe02e685b,SD_debug_log
+0xe02e68d3,SD_error_log
 0xe02e931b,task_Cave2PbTask
 0xe02ee203,handle_PTP_OC_ResetDevicePropValue
 0xe02ee355,handle_PTP_OC_SetDevicePropValue
@@ -2465,6 +2468,13 @@
 0xe0592637,PutOutNdFilter_FW
 0xe05957b9,task_MovieEditor
 0xe05a1c3b,task_SAlbumStillPlayer
+0xe05a64e5,sddomChangeClockSpeed
+0xe05a79d5,SD_GetTtlSect
+0xe05a8443,SD_ChgClkSpd
+0xe05a8491,SD_GetSpd
+0xe05aa099,SD_take_sem
+0xe05aa0a5,SD_give_sem
+0xe05ac8fd,SetSDClkFrequency
 0xe05af401,Color.TestSceneBlueSky_FW
 0xe05af40b,Color.TestSceneSunset_FW
 0xe05af415,Color.TestSceneGreen_FW

@@ -1057,6 +1057,7 @@
 0xfc20ee2b,PT_MFOn
 0xfc20ee5b,PT_MFOff
 0xfc21c241,task_MetaCtg
+0xfc21f4d5,SD_get_speed_id
 0xfc22c01f,task_MoviePlay
 0xfc239417,UIFS_WirelessExecuteSendForever_FW
 0xfc23aaff,EnableDebugLogMode_FW
@@ -1191,6 +1192,8 @@
 0xfc28c991,IsFocusLensOutSidePosition_FW
 0xfc28c9af,GetFocusResetPosition_FW
 0xfc28ca09,GetFocusDefaultResetPosition_FW
+0xfc28e069,SD_debug_log
+0xfc28e0df,SD_error_log
 0xfc28fd73,DeleteFile_Fut
 0xfc28fdbd,DeleteDirectory_Fut
 0xfc28fdf7,Fopen_Fut
@@ -1391,6 +1394,10 @@
 0xfc31e993,task_SetGeoTagExecution
 0xfc31f1a5,task_FORMAT_TASK_PROGRESS
 0xfc31f3d3,task_FORMAT_TASK_NAME
+0xfc3242e5,sddomChangeClockSpeed
+0xfc325e4b,SD_GetTtlSect
+0xfc326513,SD_ChgClkSpd
+0xfc326547,SD_GetSpd
 0xfc327d1d,task_FilYuvMaker
 0xfc328587,task_DecJpgRd
 0xfc32bebf,get_dial_hw_position
@@ -2231,3 +2238,6 @@
 0xfc435aa9,ReloadWBAdjustment_FW
 0xfc435c59,ConvertCxCyToWBGain_FW
 0xfc4362a9,task_CtgTotalTask
+0xfc437d4d,SD_take_sem
+0xfc437d59,SD_give_sem
+0xfc437fd5,SetSDClkFrequency

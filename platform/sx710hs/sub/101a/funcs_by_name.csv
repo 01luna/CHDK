@@ -1752,7 +1752,16 @@
 0xfc30a249,ScreenLock
 0xfc1849c1,screenlock_helper
 0xfc30a287,ScreenUnlock
+0x010e78fb,SD_ChgClkSpd
+0x010f46f9,SD_debug_log
+0x010f4771,SD_error_log
+0x010f21b9,SD_get_speed_id
+0x010e792f,SD_GetSpd
+0x010e6de9,SD_GetTtlSect
+0x010eda8d,SD_give_sem
+0x010eda81,SD_take_sem
 0x010e29f3,SDCardUHSActive_FW
+0x010e564d,sddomChangeClockSpeed
 0xfc5427ef,SDump_FW
 0xfc56ab25,SearchBCentralPosition_FW
 0xfc56ab25,SearchISLensCentralPosition_FW
@@ -1951,6 +1960,7 @@
 0xfc56901b,SetScanWindowMode_FW
 0xfc2ffea7,SetScriptMode
 0xfc2ffea7,SetScriptMode_FW
+0x010f385f,SetSDClkFrequency
 0xfc394b9d,SetSDConClockSpeed_FW
 0xfc4abbed,SetSDPwrPort_FW
 0xfc568167,SetSecond_FW

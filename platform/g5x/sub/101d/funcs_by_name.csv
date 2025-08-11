@@ -1845,7 +1845,16 @@
 0xfc1ba54f,Scene.TestKidMove_FW
 0xfc1ba489,Scene.TestSunset_FW
 0xfc11a9a9,screenlock_helper
+0xfc23cb83,SD_ChgClkSpd
+0xfc33dbb9,SD_debug_log
+0xfc33dc31,SD_error_log
+0xfc2f121d,SD_get_speed_id
+0xfc23cbb7,SD_GetSpd
+0xfc23c071,SD_GetTtlSect
+0xfc2e640d,SD_give_sem
+0xfc2e6401,SD_take_sem
 0x010e2a09,SDCardUHSActive_FW
+0xfc23a8c5,sddomChangeClockSpeed
 0xfc662e9b,SDump_FW
 0xfc66a14d,SearchBCentralPosition_FW
 0xfc66a14d,SearchISLensCentralPosition_FW
@@ -2049,6 +2058,7 @@
 0xfc6685fb,SetScanWindowMode_FW
 0xfc39b3a3,SetScriptMode
 0xfc39b3a3,SetScriptMode_FW
+0xfc54064f,SetSDClkFrequency
 0xfc156f99,SetSDConClockSpeed_FW
 0xfc5e3b95,SetSDPwrPort_FW
 0xfc665ce3,SetSecond_FW

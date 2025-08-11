@@ -2069,6 +2069,15 @@
 0xfc2523d7,Scene.TestSunset_FW
 0xfc37f97b,ScreenLock
 0xfc38e311,screenlock_helper
+0x010e7861,SD_ChgClkSpd
+0x010f3fad,SD_debug_log
+0x010f4025,SD_error_log
+0x010f1a95,SD_get_speed_id
+0x010e7895,SD_GetSpd
+0x010e6d31,SD_GetTtlSect
+0x010ed58d,SD_give_sem
+0x010ed581,SD_take_sem
+0x010e55e9,sddomChangeClockSpeed
 0xfc450c67,SDump_FW
 0xfc5a9d73,SearchBCentralPosition_FW
 0xfc5a9d73,SearchISLensCentralPosition_FW
@@ -2300,6 +2309,7 @@
 0xfc5a4b73,SetSafPPPBypassMode_FW
 0xfc363745,SetScriptMode
 0xfc363745,SetScriptMode_FW
+0x010f314f,SetSDClkFrequency
 0xfc0bc961,SetSDConClockSpeed_FW
 0xfc189055,SetSDPwrPort_FW
 0xfc5a6b7f,SetSecond_FW

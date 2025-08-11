@@ -876,6 +876,10 @@
 0xfc22f395,qsort
 0xfc234c5b,task_FmidTask
 0xfc237953,GraphicSystemCoreFinish
+0xfc23a8c5,sddomChangeClockSpeed
+0xfc23c071,SD_GetTtlSect
+0xfc23cb83,SD_ChgClkSpd
+0xfc23cbb7,SD_GetSpd
 0xfc242835,task_ExpDrvSubTask
 0xfc25f5f3,apex2us
 0xfc273bf3,StartTestRecLog_FW
@@ -986,6 +990,9 @@
 0xfc2e1dcd,SoundDevAprocSetPerifHpMute_FW
 0xfc2e1df7,SoundDevAprocSetPerifSpMute_FW
 0xfc2e2c41,task_MetaCtg
+0xfc2e6401,SD_take_sem
+0xfc2e640d,SD_give_sem
+0xfc2f121d,SD_get_speed_id
 0xfc2f6417,task_ExpDrv
 0xfc2f6417,task_ExpDrvTask
 0xfc31314f,EnableDebugLogMode_FW
@@ -1008,6 +1015,8 @@
 0xfc31a3ff,CzDebugPrintToFile_FW
 0xfc334e4b,UIFS_WirelessExecuteSendForever_FW
 0xfc33b453,task_Cave2PbTask
+0xfc33dbb9,SD_debug_log
+0xfc33dc31,SD_error_log
 0xfc343883,task_ZoomEvent
 0xfc343a19,task_ZoomActuatorSpeedLog
 0xfc343ff3,IsZoomActuatorResetSensorPlusSide_FW
@@ -1588,6 +1597,7 @@
 0xfc4ea86f,get_nd_value
 0xfc4eadfd,GetZoomLensCurrentPosition
 0xfc504f47,task_Raw2Ss2YuvTask
+0xfc54064f,SetSDClkFrequency
 0xfc540f65,task_TricEncVTask
 0xfc5418c1,task_TricEncMsgTask
 0xfc5422b1,task_TricInitTask

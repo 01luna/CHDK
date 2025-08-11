@@ -1064,7 +1064,10 @@
 0xfc25c31b,UnlockAE
 0xfc25d1ef,PT_MFOn
 0xfc25d21f,PT_MFOff
+0xfc262e89,SD_take_sem
+0xfc262e95,SD_give_sem
 0xfc263637,task_MetaCtg
+0xfc271df5,SD_get_speed_id
 0xfc276a8d,task_ExpDrv
 0xfc276a8d,task_ExpDrvTask
 0xfc28ddab,EnableDebugLogMode_FW
@@ -1260,6 +1263,8 @@
 0xfc2e5e57,BeepDrive_FW
 0xfc2e5e6b,BeepDriveComp_FW
 0xfc2e5e7f,BeepDriveStop_FW
+0xfc2e6645,SD_debug_log
+0xfc2e66bd,SD_error_log
 0xfc2ed5f9,ui_malloc_default
 0xfc2ed63b,ui_free_default
 0xfc2ed699,ui_malloc
@@ -1395,6 +1400,10 @@
 0xfc353c67,task_MetaInspiTask
 0xfc356b0d,task_FileManMarkAllTask
 0xfc356cb3,task_SetGeoTagExecution
+0xfc35ba8d,sddomChangeClockSpeed
+0xfc35d1bd,SD_GetTtlSect
+0xfc35dced,SD_ChgClkSpd
+0xfc35dd21,SD_GetSpd
 0xfc35fd8f,task_FilYuvMaker
 0xfc3605fb,task_DecJpgRd
 0xfc364d11,get_dial_hw_position
@@ -2238,6 +2247,7 @@
 0xfc45fc7b,CancelLoopGainCalc_FW
 0xfc45fc85,ReloadISAdjustment_FW
 0xfc45fc8f,MoveISLensToCentralPosition_FW
+0xfc465f03,SetSDClkFrequency
 0xfc4bc9d1,UIFS_PlayTrimExecuteAllImageSize_FW
 0xfc4bccc9,LCDMsg_Move_FW
 0xfc4bcd1d,LCDMsg_Delete_FW

@@ -905,6 +905,7 @@
 0xfc2992b1,SoundDevAprocSetPerifSpMute_FW
 0xfc29a105,task_MetaCtg
 0xfc29feed,task_BrtCalcTask
+0xfc2a9b8f,SD_get_speed_id
 0xfc2af0a3,task_ExpDrv
 0xfc2af0a3,task_ExpDrvTask
 0xfc2d8251,UIFS_WirelessExecuteSendForever_FW
@@ -939,6 +940,8 @@
 0xfc30925f,GetZoomActuatorSpeedPPS_FW
 0xfc309391,IsZoomActuatorResetSensorPlusSide_FW
 0xfc309b53,get_playrec_mode
+0xfc30a02d,SD_debug_log
+0xfc30a0a5,SD_error_log
 0xfc31b5fb,task_CorctTask
 0xfc31bc25,cameracon_set_state
 0xfc31bd9d,cameracon_get_state
@@ -1308,6 +1311,10 @@
 0xfc3b8a1b,task_ImgPlyTask
 0xfc3b8bcd,task_ImgPlyTsk2
 0xfc3ba8f7,task_Cave2MainTask
+0xfc3bafbd,sddomChangeClockSpeed
+0xfc3bc72f,SD_GetTtlSect
+0xfc3bd231,SD_ChgClkSpd
+0xfc3bd265,SD_GetSpd
 0xfc3c3067,task_GapMan
 0xfc3c47d3,ActivateImager_FW
 0xfc3c482f,ActivateImagerXOne_FW
@@ -2197,6 +2204,8 @@
 0xfc5117b9,memset
 0xfc5117b9,memset_FW
 0xfc51342b,task_Cave2RecTask
+0xfc514409,SD_take_sem
+0xfc514415,SD_give_sem
 0xfc515e21,task_TricDecVTask
 0xfc517ffd,GetCurrentAdjImgDriveType_FW
 0xfc518009,GetCurrentImgDrvMode_FW
@@ -2637,6 +2646,7 @@
 0xfc589ae9,kbd_read_keys
 0xfc589b1f,kbd_p1_f
 0xfc589b27,kbd_p1_f_cont
+0xfc58b0af,SetSDClkFrequency
 0xfc58b9c5,drysh_FW
 0xfc5c845d,j_StartCameraLog_FW
 0xfc5c8461,j_ShowCameraLog_FW

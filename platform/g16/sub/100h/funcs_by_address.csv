@@ -1060,8 +1060,11 @@
 0xfc255cad,PT_MFOn
 0xfc255ce1,PT_MFOff
 0xfc25db8d,task_MetaCtg
+0xfc260aad,SD_take_sem
+0xfc260ab9,SD_give_sem
 0xfc2646cb,task_CorctTask
 0xfc26668d,task_MoviePlay
+0xfc26c4e1,SD_get_speed_id
 0xfc27e3cf,EnableDebugLogMode_FW
 0xfc27e3d9,DisableDebugLogMode_FW
 0xfc2823bb,LcdCon_SetLcdDriver_FW
@@ -1275,6 +1278,8 @@
 0xfc2e0dc7,GetCurrentShutterSpeed
 0xfc2e0dc7,GetCurrentShutterSpeed_FW
 0xfc2e1001,GetCurrentExposureTime_FW
+0xfc2e2239,SD_debug_log
+0xfc2e22b1,SD_error_log
 0xfc2ea9d5,SetPropertyCase
 0xfc2eaaeb,GetPropertyCase
 0xfc2ec90f,UIFS_GetNumOfOptZoomPos_FW
@@ -1505,6 +1510,10 @@
 0xfc37a0df,task_MetaInspiTask
 0xfc37b485,task_FileManMarkAllTask
 0xfc37b62b,task_SetGeoTagExecution
+0xfc37e4d9,sddomChangeClockSpeed
+0xfc37fbfd,SD_GetTtlSect
+0xfc38072d,SD_ChgClkSpd
+0xfc380761,SD_GetSpd
 0xfc382671,task_FilYuvMaker
 0xfc382edb,task_DecJpgRd
 0xfc38801d,GetFocusLensResetPosition_FW
@@ -2228,6 +2237,7 @@
 0xfc46f087,CancelLoopGainCalc_FW
 0xfc46f091,ReloadISAdjustment_FW
 0xfc46f09b,MoveISLensToCentralPosition_FW
+0xfc472673,SetSDClkFrequency
 0xfc474af5,task_ImgPlyTask
 0xfc474c01,task_ImgPlyLowTask
 0xfc47702f,SetPMByGpio_FW
