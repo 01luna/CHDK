@@ -638,3 +638,23 @@ def get_refs_from_addrset(addrs):
         for r in refs:
             yield r
 
+# iterator over all calls to function fn, including thunks
+def get_calls_to(fn):
+    faddr = fn.getEntryPoint()
+    # recursively get all thunks to function
+    addrs = fn.getFunctionThunkAddresses(True)
+    if addrs is None:
+        addrs = [faddr]
+    else:
+        addrs.append(faddr)
+
+    # regular FlatProgramAPI getReferencesTo is limited to 4096 results
+    # note ref manager returns an iterator, not a snapshot list
+    refman = getCurrentProgram().getReferenceManager()
+
+    for addr in addrs:
+        for ref in refman.getReferencesTo(addr):
+            if not ref.getReferenceType().isCall():
+                continue
+            yield ref.getFromAddress()
+

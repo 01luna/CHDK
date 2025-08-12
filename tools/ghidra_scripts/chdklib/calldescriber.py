@@ -23,6 +23,7 @@ import chdklib.logutil
 from chdklib.logutil import infomsg, warn
 from chdklib.defines_loader import PropsetData
 from chdklib.leventutil import LeventData
+from chdklib.analyzeutil import get_calls_to
 
 from chdklib.regsanalyzer import RegsAnalyzer
 
@@ -85,23 +86,13 @@ class CallDescriber(object):
             infomsg(0,'%s not a function, skipping\n'%(fname))
             return
 
-        # recursively get all thunks to function
-        addrs = fn.getFunctionThunkAddresses(True)
-        if addrs is None:
-            addrs = [faddr]
-        else:
-            addrs.append(faddr)
 
-        for addr in addrs:
-            for ref in getReferencesTo(addr):
-                if not ref.getReferenceType().isCall():
-                    continue
-                addr = ref.getFromAddress()
-                desc = self.describe_call(addr,fname)
-                if desc is None:
-                    continue
+        for addr in get_calls_to(fn):
+            desc = self.describe_call(addr,fname)
+            if desc is None:
+                continue
 
-                yield desc
+            yield desc
 
     def describe_all_calls(self):
         for fname in self.funcdesc.keys():
