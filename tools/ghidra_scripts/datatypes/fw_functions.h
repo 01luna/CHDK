@@ -269,6 +269,7 @@ __stdcall unsigned int GetDrive_ClusterSize(int drive);
 __stdcall unsigned int GetDrive_TotalClusters(int drive);
 __stdcall unsigned int GetDrive_FreeClusters(int drive);
 __stdcall int WriteSDCard(unsigned int drive, unsigned int start_sect, unsigned int num_sect, void *buf);
+__stdcall int ReadSDCard(unsigned int drive, unsigned int start_sect, unsigned int num_sect, void *buf);
 
 __stdcall void UnsetZoomForMovie(void);
 __stdcall void TurnOffMic(void);
