@@ -95,6 +95,89 @@ void CreateTask_blinker()
 }
 */
 
+//#define SD_LOGGING 1
+#ifdef SD_LOGGING
+const char *get_task_name(void) {
+    int x=*(int *)0x803c; // from get_task_properties
+    const char *p = (const char *)*((int *)(x + 0x24));
+    return p?p:"(null)";
+}
+
+#define SD_LOG_BUF_SIZE (64*1024)
+char sd_log_buf[SD_LOG_BUF_SIZE];
+char *p_buf=sd_log_buf;
+void sd_cmd_log(int r0, int r1, int r2, int lr) {
+    static int acmd=0;
+    if(p_buf - sd_log_buf > SD_LOG_BUF_SIZE-128) {
+        return;
+    }
+    p_buf += sprintf(p_buf,"%05d %s:%08x ",get_tick_count(),get_task_name(),lr);
+    // r0 is sd slot/interface id, should always be 0 but may see traffic for other SDIO
+    if(r0 != 0) {
+        p_buf += sprintf(p_buf,"%d ",r0);
+    }
+    if(acmd) {
+        p_buf += sprintf(p_buf,"ACMD%d",r1);
+        acmd=0;
+    } else  {
+        if(r1 == 55) {
+            acmd=1;
+        }
+        p_buf += sprintf(p_buf,"CMD%d",r1);
+    }
+    // omit 0 param to be more compact
+    if(r2 != 0) {
+        p_buf += sprintf(p_buf,"=%08x",r2);
+    }
+    *p_buf = '\n';
+    p_buf++;
+}
+#include "asmsafe.h"
+void __attribute__((naked,noinline)) sd_cmd_my() {
+    asm volatile (
+ASM_SAFE(
+"mov r3,lr\n"
+"bl sd_cmd_log\n"
+)
+"push	{r4, r5, r6, lr}\n" // replaced instructions
+"mov	r5, r0\n"
+"lsls	r0, r1, #0x1a\n"
+"lsrs	r1, r2, #0x18\n"
+"ldr pc,=0x010f2187\n"
+    );
+}
+
+void sd_log_hook(int n,const char *fmt,...) {
+    if(p_buf - sd_log_buf > SD_LOG_BUF_SIZE-128) {
+        return;
+    }
+// n always seems to be 1
+//    p_buf += sprintf(p_buf,"%05d %s %d ",get_tick_count(),get_task_name(),n);
+    p_buf += sprintf(p_buf,"%05d %s ",get_tick_count(),get_task_name());
+    __builtin_va_list va;
+    __builtin_va_start(va, fmt);
+    p_buf += _vsprintf(p_buf, fmt, va);
+    *p_buf = '\n';
+    p_buf++;
+}
+
+void sd_errlog_hook(int n,const char *fmt,...) {
+    if(p_buf - sd_log_buf > SD_LOG_BUF_SIZE-128) {
+        return;
+    }
+// n always seems to be 1
+//    p_buf += sprintf(p_buf,"%05d %s %d ",get_tick_count(),get_task_name(),n);
+    p_buf += sprintf(p_buf,"%05d %s ERR ",get_tick_count(),get_task_name());
+    __builtin_va_list va;
+    __builtin_va_start(va, fmt);
+    p_buf += _vsprintf(p_buf, fmt, va);
+// error logs seem to include newline
+//    *p_buf = '\n';
+//    p_buf++;
+}
+#endif // SD_LOGGING
+
+
 /*----------------------------------------------------------------------
     boot()
 
@@ -144,6 +227,37 @@ void __attribute__((naked,noinline)) boot() {
         "strh   r3, [r1],#2\n"
         "cmp    r0,r2\n"
         "blo    task_hook_loop\n"
+
+#ifdef SD_LOGGING
+// SD cmd hook
+        "adr     r0, patch_sd_cmd\n"    // src: Patch data
+        "ldr     r1, =0x010f217e\n"    // dest (via CMD0_Initialize)
+        "add     r2, r0, #8\n" // two words
+"sd_hook_loop:\n"
+        "ldrh   r3, [r0],#2\n"
+        "strh   r3, [r1],#2\n"
+        "cmp    r0,r2\n"
+        "blo    sd_hook_loop\n"
+// SD log hook
+        "adr     r0, patch_sd_log\n"    // src: Patch data
+        "ldr     r1, =0x010f46f8\n"    // SD_debug_log
+        "add     r2, r0, #8\n" // two words
+"sd_log_hook_loop:\n"
+        "ldrh   r3, [r0],#2\n"
+        "strh   r3, [r1],#2\n"
+        "cmp    r0,r2\n"
+        "blo    sd_log_hook_loop\n"
+// SD error log hook
+        "adr     r0, patch_sd_errlog\n"    // src: Patch data
+        "ldr     r1, =0x010f4770\n"    // SD_error_log
+        "add     r2, r0, #8\n" // two words
+"sd_errlog_hook_loop:\n"
+        "ldrh   r3, [r0],#2\n"
+        "strh   r3, [r1],#2\n"
+        "cmp    r0,r2\n"
+        "blo    sd_errlog_hook_loop\n"
+#endif // SD_LOGGING
+
 "    ldr     r0, =0xfcd1e5d4\n"
 "    ldr     r1, =0x00008000\n" // DATA copied
 "    ldr     r3, =0x00030e58\n" // to RAM
@@ -167,6 +281,24 @@ void __attribute__((naked,noinline)) boot() {
         "patch_CreateTask:\n"
         "ldr.w   pc, [pc,#0]\n"             // Do jump to absolute address CreateTask_my
         ".long   CreateTask_my + 1\n"           // has to be a thumb address
+
+#ifdef SD_LOGGING
+"patch_sd_log:\n"
+"ldr.w   pc, [pc,#0]\n"             // Do jump to absolute address
+".long   sd_log_hook + 1\n"         // has to be a thumb address
+"patch_sd_errlog:\n"
+"ldr.w   pc, [pc,#0]\n"             // Do jump to absolute address
+".long   sd_errlog_hook + 1\n"      // has to be a thumb address
+// this one is unaligned
+".align 2\n"
+".hword 0\n"
+"patch_sd_cmd:\n"
+"ldr.w   pc, _sd_cmd_my\n"          // Do jump to absolute address
+"_sd_cmd_my:\n"
+".long   sd_cmd_my + 1\n"           // has to be a thumb address
+".align 1\n"
+#endif // SD_LOGGING
+
 );
 }
 
@@ -272,7 +404,7 @@ asm volatile (
 "    itt     eq\n"
 "    ldreq   r3, =init_file_modules_task\n"
 "    orreq   r3, #1\n"
-"exitHook:\n" 
+"exitHook:\n"
 // restore overwritten register(s)
 "    pop    {r0}\n"
 // Execute overwritten instructions from original code, then jump to firmware
@@ -494,7 +626,7 @@ void __attribute__((naked,noinline)) sub_fc0cf0ee_my() {
 "    bl      sub_fc0847ea\n"
 "    bic.w   r4, r6, r0\n"
 "loc_fc0cf13a:\n"
-"    cmp.w   sl, #0\n" 
+"    cmp.w   sl, #0\n"
 "    beq     loc_fc0cf14a\n"// skips checks if not IsNormalCameraMode
 "    orr.w   r0, r8, r7\n"
 "    orrs    r0, r5\n"
@@ -538,7 +670,7 @@ void __attribute__((naked,noinline)) task_Startup_my() {
 "    bl      sub_fc0917c4\n"
 "    bl      sub_fc0cf7e2\n"
 "    bl      sub_fc0cf014_my\n" // CreateTask PhySw
-"    bl      CreateTask_spytask\n" 
+"    bl      CreateTask_spytask\n"
 "    bl      init_required_fw_features\n" // added
 "    bl      sub_fc26731c\n" // SsTask etc
 "    bl      sub_fc0cf7f8\n"
@@ -586,7 +718,7 @@ void __attribute__((naked,noinline)) sub_fc0cf014_my() {
     ".ltorg\n"
     );
 }
- 
+
 // -f=chdk -s=task_InitFileModules -c=16
 void __attribute__((naked,noinline)) init_file_modules_task() {
     asm volatile (
