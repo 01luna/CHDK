@@ -973,6 +973,7 @@
 0xfc181b23,GetSafOffsetPTableDataSize_FW
 0xfc181b2d,GetSafSHDTableDataSize_FW
 0xfc1f289b,GetScalar_Acceleration_FW
+0x010e2b93,GetSDCardTotalSect
 0xfc08cb43,GetSDDetect_FW
 0xfc08cb49,GetSDProtect_FW
 0xfc5bc9ad,GetSecond_FW
@@ -1178,6 +1179,7 @@
 0xfc021591,InitializeSoundRec_FW
 0xfc097239,InitializeTestRec_FW
 0xfc08cde9,InitializeWLAN_FW
+0x010e2aa7,InitSDCard
 0xfc12f963,is_movie_recording
 0xfc440c2b,ISActive_FW
 0xfc43e4af,IsAvailableCZSpeed_FW
@@ -2073,6 +2075,10 @@
 0xfc26e073,screenlock_helper
 0xfc38c53b,ScreenUnlock
 0x010e78ff,SD_ChgClkSpd
+0x010f0593,SD_CMD55_SendAppCommand
+0x010f21e3,SD_cmd_send
+0x010f219f,SD_cmd_setup
+0x010f195d,SD_cmd_setup_resp48b
 0x010f4725,SD_debug_log
 0x010f479d,SD_error_log
 0x010f21d9,SD_get_speed_id
@@ -2081,6 +2087,7 @@
 0x010eda91,SD_give_sem
 0x010eda85,SD_take_sem
 0x010e2a4f,SDCardUHSActive_FW
+0x010f22ef,sdconWaitInterrupt
 0x010e5645,sddomChangeClockSpeed
 0xfc4437cf,SDump_FW
 0xfc5bfed7,SearchBCentralPosition_FW

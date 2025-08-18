@@ -538,7 +538,12 @@
 0xe02b2a6f,LcdCon_ShowLcdParameter_FW
 0xe02b2a95,LcdCon_SaveLcdParameter_FW
 0xe02b34e7,task_BrtCalcTask
+0xe02baf35,SD_CMD55_SendAppCommand
+0xe02bc30f,SD_cmd_setup_resp48b
+0xe02bcae7,SD_cmd_setup
 0xe02bcb21,SD_get_speed_id
+0xe02bcb2b,SD_cmd_send
+0xe02bcc37,sdconWaitInterrupt
 0xe02d0ad9,task_ExpDrv
 0xe02d0ad9,task_ExpDrvTask
 0xe02e548f,EnableDebugLogMode_FW
@@ -1198,6 +1203,8 @@
 0xe051a40f,handle_PTP_OC_CANON_CheckEvent
 0xe051bb71,GetZoomLensCurrentPosition
 0xe051e837,SDCardUHSActive_FW
+0xe051e8d5,InitSDCard
+0xe051ea43,GetSDCardTotalSect
 0xe051ea51,ReadSDCard
 0xe051eaff,WriteSDCard
 0xe051ffb5,task_TrnsCtrlTask

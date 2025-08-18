@@ -897,6 +897,8 @@
 0xfc199dc9,File.Delete_AllImg_FW
 0xfc199e0d,File.Create_FW
 0xfc19a0a5,file_counter_var_init
+0xfc19b985,InitSDCard
+0xfc19ba41,GetSDCardTotalSect
 0xfc19ba4f,ReadSDCard
 0xfc19bb17,WriteSDCard
 0xfc19ddb7,GetUsableAvRange
@@ -1056,8 +1058,13 @@
 0xfc20df73,UnlockAE
 0xfc20ee2b,PT_MFOn
 0xfc20ee5b,PT_MFOff
+0xfc213615,SD_cmd_setup_resp48b
+0xfc214f8b,SD_CMD55_SendAppCommand
 0xfc21c241,task_MetaCtg
+0xfc21f499,SD_cmd_setup
 0xfc21f4d5,SD_get_speed_id
+0xfc21f4df,SD_cmd_send
+0xfc21f63b,sdconWaitInterrupt
 0xfc22c01f,task_MoviePlay
 0xfc239417,UIFS_WirelessExecuteSendForever_FW
 0xfc23aaff,EnableDebugLogMode_FW

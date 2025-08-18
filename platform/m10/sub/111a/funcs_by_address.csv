@@ -8,6 +8,8 @@
 0x010e2275,GetRomID
 0x010e28dd,ChangeSDPortVoltage_FW
 0x010e2a4f,SDCardUHSActive_FW
+0x010e2aa7,InitSDCard
+0x010e2b93,GetSDCardTotalSect
 0x010e2ba1,ReadSDCard
 0x010e2c9d,WriteSDCard
 0x010e5645,sddomChangeClockSpeed
@@ -16,7 +18,12 @@
 0x010e7933,SD_GetSpd
 0x010eda85,SD_take_sem
 0x010eda91,SD_give_sem
+0x010f0593,SD_CMD55_SendAppCommand
+0x010f195d,SD_cmd_setup_resp48b
+0x010f219f,SD_cmd_setup
 0x010f21d9,SD_get_speed_id
+0x010f21e3,SD_cmd_send
+0x010f22ef,sdconWaitInterrupt
 0x010f387f,SetSDClkFrequency
 0x010f43a1,j_mktime_ext
 0x010f44ec,j_dcache_flush_and_enable

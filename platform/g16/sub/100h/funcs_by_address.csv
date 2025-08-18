@@ -580,6 +580,8 @@
 0xfc10a7bb,task_dccdCalcTask
 0xfc10bd15,task_DPOFTask
 0xfc10e04d,task_MediaStatusMngr
+0xfc10e315,InitSDCard
+0xfc10e44f,GetSDCardTotalSect
 0xfc10e45d,ReadSDCard
 0xfc10e525,WriteSDCard
 0xfc10ea99,task_MechaCPUTransfer
@@ -1062,9 +1064,14 @@
 0xfc25db8d,task_MetaCtg
 0xfc260aad,SD_take_sem
 0xfc260ab9,SD_give_sem
+0xfc262f93,SD_CMD55_SendAppCommand
+0xfc2640ed,SD_cmd_setup_resp48b
 0xfc2646cb,task_CorctTask
 0xfc26668d,task_MoviePlay
+0xfc26c4a7,SD_cmd_setup
 0xfc26c4e1,SD_get_speed_id
+0xfc26c4eb,SD_cmd_send
+0xfc26c585,sdconWaitInterrupt
 0xfc27e3cf,EnableDebugLogMode_FW
 0xfc27e3d9,DisableDebugLogMode_FW
 0xfc2823bb,LcdCon_SetLcdDriver_FW

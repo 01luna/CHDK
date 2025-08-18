@@ -691,6 +691,7 @@
 0xfc1a77d3,GetPropertyCase_FW
 0x010c7991,GetRomID
 0xfc0d1bb9,GetRomID_FW
+0xfc19ba41,GetSDCardTotalSect
 0xfc060483,GetSDDetect_FW
 0xfc060489,GetSDProtect_FW
 0xfc3e1b89,GetSecond_FW
@@ -897,6 +898,7 @@
 0xfc021321,InitializeSoundRec_FW
 0xfc0c9049,InitializeTestRec_FW
 0xfc081341,InitializeWLAN_FW
+0xfc19b985,InitSDCard
 0xfc135ac1,is_movie_recording
 0xfc3dceb5,IsAdjCdsMode_FW
 0xfc3b86b1,ISAutoCenter_FW
@@ -1579,6 +1581,10 @@
 0xfc3939bd,screenlock_helper
 0xfc143c0b,ScreenUnlock
 0xfc326497,SD_ChgClkSpd
+0xfc214f77,SD_CMD55_SendAppCommand
+0xfc21f4cb,SD_cmd_send
+0xfc21f485,SD_cmd_setup
+0xfc213601,SD_cmd_setup_resp48b
 0xfc28dff9,SD_debug_log
 0xfc28e06f,SD_error_log
 0xfc21f4c1,SD_get_speed_id
@@ -1586,6 +1592,7 @@
 0xfc325dcf,SD_GetTtlSect
 0xfc437cc9,SD_give_sem
 0xfc437cbd,SD_take_sem
+0xfc21f627,sdconWaitInterrupt
 0xfc324269,sddomChangeClockSpeed
 0xfc08f7d1,SdDrv_SetSSCG_FW
 0xfc3b96af,SDump_FW

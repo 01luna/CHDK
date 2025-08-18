@@ -65,6 +65,8 @@
 0x010e69bf,ReleaseRecursiveLock
 0x010e7341,GetRomID
 0x010e78cd,ChangeSDPortVoltage_FW
+0x010e7a37,InitSDCard
+0x010e7b2b,GetSDCardTotalSect
 0x010e7b39,ReadSDCard
 0xfcd1d6df,WriteSDCard,(stubs_entry_2.s)
 0x010ea61d,sddomChangeClockSpeed
@@ -73,7 +75,12 @@
 0x010ec8c9,SD_GetSpd
 0x010f2681,SD_take_sem
 0x010f268d,SD_give_sem
+0x010f50df,SD_CMD55_SendAppCommand
+0x010f6337,SD_cmd_setup_resp48b
+0x010f6b3f,SD_cmd_setup
 0x010f6b79,SD_get_speed_id
+0x010f6b83,SD_cmd_send
+0x010f6c8f,sdconWaitInterrupt
 0x010f772d,j2_GetSRAndDisableInterrupt
 0x010f7737,j2_SetSR
 0x010f78c5,j_mktime_ext

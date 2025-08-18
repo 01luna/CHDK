@@ -9,6 +9,8 @@
 0x010e179d,task_SD1stInit
 0x010e2285,GetRomID
 0x010e2a09,SDCardUHSActive_FW
+0x010e2a61,InitSDCard
+0x010e2bc1,GetSDCardTotalSect
 0x010e2bcf,ReadSDCard
 0x010ee231,j_mktime_ext
 0x010ee23b,j2_strftime
@@ -992,7 +994,12 @@
 0xfc2e2c19,task_MetaCtg
 0xfc2e63d9,SD_take_sem
 0xfc2e63e5,SD_give_sem
+0xfc2ef2ab,SD_CMD55_SendAppCommand
+0xfc2f089b,SD_cmd_setup_resp48b
+0xfc2f11bb,SD_cmd_setup
 0xfc2f11f5,SD_get_speed_id
+0xfc2f11ff,SD_cmd_send
+0xfc2f130b,sdconWaitInterrupt
 0xfc2f63ef,task_ExpDrv
 0xfc2f63ef,task_ExpDrvTask
 0xfc313127,EnableDebugLogMode_FW

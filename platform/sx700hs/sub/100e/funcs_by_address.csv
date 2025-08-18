@@ -559,6 +559,8 @@
 0xfc0e5873,SaveFactoryIDData_FW
 0xfc0e587f,LoadFactoryIDData_FW
 0xfc0e67fd,task_DPOFTask
+0xfc0e8363,InitSDCard
+0xfc0e8447,GetSDCardTotalSect
 0xfc0e8455,ReadSDCard
 0xfc0e851d,WriteSDCard
 0xfc0e8ea7,task_IrisCycleEvent
@@ -1067,7 +1069,12 @@
 0xfc262dbd,SD_take_sem
 0xfc262dc9,SD_give_sem
 0xfc26356b,task_MetaCtg
+0xfc269147,SD_CMD55_SendAppCommand
+0xfc26a373,SD_cmd_setup_resp48b
+0xfc271cbf,SD_cmd_setup
 0xfc271cf9,SD_get_speed_id
+0xfc271d03,SD_cmd_send
+0xfc271e0f,sdconWaitInterrupt
 0xfc276991,task_ExpDrv
 0xfc276991,task_ExpDrvTask
 0xfc28dcaf,EnableDebugLogMode_FW

@@ -1,4 +1,6 @@
 0x010e12bf,SDCardUHSActive_FW
+0x010e1317,InitSDCard
+0x010e1439,GetSDCardTotalSect
 0x010e1447,ReadSDCard
 0x010e14f9,WriteSDCard
 0x010e1a37,task_SD1stInit
@@ -905,7 +907,12 @@
 0xfc2992b1,SoundDevAprocSetPerifSpMute_FW
 0xfc29a105,task_MetaCtg
 0xfc29feed,task_BrtCalcTask
+0xfc2a7c23,SD_CMD55_SendAppCommand
+0xfc2a9213,SD_cmd_setup_resp48b
+0xfc2a9b55,SD_cmd_setup
 0xfc2a9b8f,SD_get_speed_id
+0xfc2a9b99,SD_cmd_send
+0xfc2a9ca5,sdconWaitInterrupt
 0xfc2af0a3,task_ExpDrv
 0xfc2af0a3,task_ExpDrvTask
 0xfc2d8251,UIFS_WirelessExecuteSendForever_FW
