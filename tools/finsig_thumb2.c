@@ -258,6 +258,8 @@ sig_entry_t  sig_names[MAX_SIG_ENTRY] =
     { "Write" },
     { "WriteSDCard" },
     { "ReadSDCard", OPTIONAL|UNUSED },
+    { "InitSDCard", OPTIONAL|UNUSED },
+    { "GetSDCardTotalSect", OPTIONAL|UNUSED },
 
     { "_log" },
     { "_log10" },
@@ -578,6 +580,11 @@ sig_entry_t  sig_names[MAX_SIG_ENTRY] =
     { "SD_GetSpd", OPTIONAL|UNUSED },// gets SD speed id enum and another value
     { "SD_get_speed_id", OPTIONAL|UNUSED },// gets SD speed id
     { "SetSDClkFrequency", OPTIONAL|UNUSED },// sets MMIOs based on speed id
+    { "SD_CMD55_SendAppCommand", OPTIONAL|UNUSED },// sends CMD55
+    { "SD_cmd_setup", OPTIONAL|UNUSED },// set command and parameter MMIO
+    { "SD_cmd_setup_resp48b", OPTIONAL|UNUSED },// set response size to 48 bits and some unknown flags 0x2701
+    { "SD_cmd_send", OPTIONAL|UNUSED },// probably triggers actual sending of SD command
+    { "sdconWaitInterrupt", OPTIONAL|UNUSED },
 
     {0,0,0},
 };
@@ -4914,26 +4921,51 @@ int sig_match_init_sd_io_funcs(firmware *fw, iter_state_t *is, sig_rule_t *rule)
     return save_sig_with_j(fw,rule->name,get_branch_call_insn_target(fw,is));
 }
 
+#define SIG_SD_IO_FUNC_OFF_MASK 0xff
+#define SIG_SD_IO_FUNC_OFF(param) ((param)&SIG_SD_IO_FUNC_OFF_MASK)
+#define SIG_SD_IO_FUNC_STR   0x10000
+// strd, first reg
+#define SIG_SD_IO_FUNC_STRD1 0x20000
+
+
 int sig_match_sd_io_func(firmware *fw, iter_state_t *is, sig_rule_t *rule)
 {
+    uint32_t offset = SIG_SD_IO_FUNC_OFF(rule->param);
     if(!init_disasm_sig_ref(fw,is,rule)) {
         return 0;
     }
+    uint32_t sadr = is->adr;
     const insn_match_t write_fn_str_match[]={
-        {MATCH_INS(STR,     2), {MATCH_OP_REG_ANY,  MATCH_OP_MEM(INVALID,INVALID,rule->param)}},
+        {MATCH_INS(STR,     2), {MATCH_OP_REG_ANY,  MATCH_OP_MEM(INVALID,INVALID,offset)}},
         {ARM_INS_ENDING}
     };
+    const insn_match_t write_fn_strd_match[]={
+        {MATCH_INS(STRD,     3), {MATCH_OP_REG_ANY, MATCH_OP_REG_ANY, MATCH_OP_MEM(INVALID,INVALID,offset)}},
+        {ARM_INS_ENDING}
+    };
+    arm_reg fn_reg = ARM_REG_INVALID;
     // search for store to function offset
-    if(!insn_match_find_next(fw,is,46,write_fn_str_match)) {
-        printf("sig_match_sd_io_func: %s no match STR 0x%"PRIx64"\n",rule->name,is->insn->address);
+    if(rule->param & SIG_SD_IO_FUNC_STR) {
+        if(insn_match_find_next(fw,is,46,write_fn_str_match)) {
+            fn_reg = (arm_reg)is->insn->detail->arm.operands[0].reg;
+        }
+    }
+    if(fn_reg == ARM_REG_INVALID && rule->param & SIG_SD_IO_FUNC_STRD1) {
+        disasm_iter_init(fw,is,sadr | fw->thumb_default);
+        if(insn_match_find_next(fw,is,46,write_fn_strd_match)) {
+            fn_reg = (arm_reg)is->insn->detail->arm.operands[0].reg;
+        }
+    }
+    if(fn_reg == ARM_REG_INVALID) {
+        printf("sig_match_sd_io_func: %s no match STR(D) 0x%x\n",rule->name,sadr);
         return 0;
     }
-    arm_reg fn_reg = (arm_reg)is->insn->detail->arm.operands[0].reg;
     // backtrack until we find ldr into reg
     int i;
     for(i=1; i<5; i++) {
         fw_disasm_iter_single(fw,adr_hist_get(&is->ah,i));
         cs_insn *insn=fw->is->insn;
+        // currently assumed to be first reg, strd could be second but isn't in known firmware
         if(insn->id != ARM_INS_LDR || (arm_reg)insn->detail->arm.operands[0].reg != fn_reg) {
             continue;
         }
@@ -6124,8 +6156,12 @@ sig_rule_t sig_rules_main[]={
 // TODO some d7 cams have ldr before push, but fail to match for other reasons
 {sig_match_func_using_str,  "ExpCtrlTool_StopContiAE",  "StopContiAE",  SIG_USESTR_BACK(13) },
 {sig_match_init_sd_io_funcs,"init_sd_io_funcs",         "\nStartDiskboot\n",   SIG_NEAR_BEFORE(7,2) },
-{sig_match_sd_io_func,   "WriteSDCard",                 "init_sd_io_funcs", 0x54 }, // WriteSDCard is at 0x54 for all known d6/d7 firmware
-{sig_match_sd_io_func,   "ReadSDCard",                  "init_sd_io_funcs", 0x50 },
+{sig_match_sd_io_func,   "WriteSDCard",         "init_sd_io_funcs",     0x54 | SIG_SD_IO_FUNC_STR }, // WriteSDCard is at 0x54 for all known d6/d7 firmware
+{sig_match_sd_io_func,   "ReadSDCard",          "init_sd_io_funcs",     0x50 | SIG_SD_IO_FUNC_STR },
+{sig_match_sd_io_func,   "InitSDCard",          "init_sd_io_funcs",     0x58 | SIG_SD_IO_FUNC_STRD1, SIG_DRY_MAX(58) },
+{sig_match_sd_io_func,   "InitSDCard",          "init_sd_io_funcs",     0x58 | SIG_SD_IO_FUNC_STR | SIG_SD_IO_FUNC_STRD1, SIG_DRY_MIN(59) },
+// note this doesn't match on M6, which has two sets of possible IO funcs
+{sig_match_sd_io_func,   "GetSDCardTotalSect",  "init_sd_io_funcs",     0x64 | SIG_SD_IO_FUNC_STR },
 // sx280 is different from other dry52, no trailing "s" on the logs
 {sig_match_func_using_str,  "SD_ChgClkSpd",     "ChgClkSpd(%d,%d)",     SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // sx280
 {sig_match_func_using_str,  "SD_ChgClkSpd",     "ChgClkSpd(%d,%d)s",    SIG_USESTR_BACK(11)|SIG_SEARCH_ROM,   SIG_DRY_MAX(52), SIG_OPTIONAL }, // other r52
@@ -6159,6 +6195,12 @@ sig_rule_t sig_rules_main[]={
 {sig_match_named,           "SD_get_speed_id","SD_GetSpd",     SIG_NAMED_NTH(4,SUB), SIG_DRY_MINP(59,4), SIG_NO_D6 },
 {sig_match_near_str, "SetSDClkFrequency","%s(%d) SetSDClkFrequency() NG!\n",SIG_NEAR_BEFORE(4,1)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MAX(55) },
 {sig_match_near_str, "SetSDClkFrequency","%s(%d) SetSDClkFrequency() ERR!\n",SIG_NEAR_BEFORE(6,1)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(56) },
+{sig_match_near_str, "SD_CMD55_SendAppCommand","%s(%d) CMD41_GetCardPowerUpStatu() NG!\n",SIG_NEAR_AFTER(10,3)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MAX(55) },
+{sig_match_near_str, "SD_CMD55_SendAppCommand","%s(%d) CMD41_GetCardPowerUpStatu() ERR!\n",SIG_NEAR_AFTER(10,3)|SIG_SEARCH_RAM|SIG_SEARCH_ROM, SIG_DRY_MIN(56) },
+{sig_match_named,    "SD_cmd_setup",        "SD_CMD55_SendAppCommand",  SIG_NAMED_NTH(1,SUB) },
+{sig_match_named,    "SD_cmd_setup_resp48b","SD_CMD55_SendAppCommand",  SIG_NAMED_NTH(2,SUB) },
+{sig_match_named,    "SD_cmd_send",         "SD_CMD55_SendAppCommand",  SIG_NAMED_NTH(3,SUB) },
+{sig_match_named,    "sdconWaitInterrupt",  "SD_CMD55_SendAppCommand",  SIG_NAMED_NTH(4,SUB) },
 
 {NULL},
 };

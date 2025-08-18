@@ -270,6 +270,8 @@ __stdcall unsigned int GetDrive_TotalClusters(int drive);
 __stdcall unsigned int GetDrive_FreeClusters(int drive);
 __stdcall int WriteSDCard(unsigned int drive, unsigned int start_sect, unsigned int num_sect, void *buf);
 __stdcall int ReadSDCard(unsigned int drive, unsigned int start_sect, unsigned int num_sect, void *buf);
+__stdcall int InitSDCard(unsigned int drive);
+__stdcall unsigned int GetSDCardTotalSect(unsigned int drive);
 
 __stdcall void UnsetZoomForMovie(void);
 __stdcall void TurnOffMic(void);
@@ -592,8 +594,13 @@ __stdcall int SD_give_sem(unsigned sd_id);
 __stdcall int SD_debug_log(int unk, const char *fmt,...);
 __stdcall int SD_error_log(int unk, const char *fmt,...);
 __stdcall int sddomChangeClockSpeed(unsigned sd_id, unsigned speed_id);
-__stdcall int SD_GetSpd(int sd_id, unsigned *unk1, unsigned *speed_id);
-__stdcall int SD_speed_id(int sd_id, unsigned *speed_id);
-__stdcall int SetSDClkFrequency(int sd_id, unsigned speed_id);
+__stdcall int SD_GetSpd(unsigned sd_id, unsigned *unk1, unsigned *speed_id);
+__stdcall int SD_speed_id(unsigned sd_id, unsigned *speed_id);
+__stdcall int SetSDClkFrequency(unsigned sd_id, unsigned speed_id);
+__stdcall int SD_CMD55_SendAppCommand(unsigned sd_id, unsigned rca);
+__stdcall void SD_cmd_setup(int sd_id, unsigned cmd, unsigned param);
+__stdcall void SD_cmd_setup_resp48b(int sd_id);
+__stdcall void SD_cmd_send(int sd_id,unsigned unk);
+__stdcall int sdconWaitInterrupt(int sd_id, unsigned timeout);
 
 #endif // FW_FUNCTIONS_H
