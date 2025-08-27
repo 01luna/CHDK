@@ -594,7 +594,7 @@ __stdcall int SD_give_sem(unsigned sd_id);
 __stdcall int SD_debug_log(int unk, const char *fmt,...);
 __stdcall int SD_error_log(int unk, const char *fmt,...);
 __stdcall int sddomChangeClockSpeed(unsigned sd_id, unsigned speed_id);
-__stdcall int SD_GetSpd(unsigned sd_id, unsigned *unk1, unsigned *speed_id);
+__stdcall int SD_GetSpd(unsigned sd_id, unsigned *acc_mode, unsigned *speed_id);
 __stdcall int SD_speed_id(unsigned sd_id, unsigned *speed_id);
 __stdcall int SetSDClkFrequency(unsigned sd_id, unsigned speed_id);
 __stdcall int SD_CMD55_SendAppCommand(unsigned sd_id, unsigned rca);
