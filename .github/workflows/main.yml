@@ -1,0 +1,35 @@
+name: Fetch Changes
+permissions: write-all
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '0 0 * * *'
+
+jobs:
+  fetch-changes:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+    - run: |
+        sudo add-apt-repository ppa:git-core/ppa
+        sudo apt-get install git-svn
+    - id: load
+      uses: actions/cache/restore@v3
+      with:
+        path: .git
+        key: git-cache
+    - if: steps.load.outputs.cache-hit != 'true'
+      run: git svn init https://subversion.assembla.com/svn/chdk/trunk/     
+    - run: |
+        echo guest|git svn fetch --username guest
+        git rebase git-svn --force-rebase    
+    - uses: actions/cache/save@v3
+      with:
+        path: .git
+        key: git-cache
+    - uses: actions/checkout@v3
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+    - run: git push
