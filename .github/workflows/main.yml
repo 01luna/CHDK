@@ -24,6 +24,7 @@ jobs:
       run: git svn init https://subversion.assembla.com/svn/chdk/trunk/     
     - run: |
         echo guest|git svn fetch --username guest
+        git clean -fd
         git rebase git-svn --force-rebase --autostash  
     - uses: actions/cache/save@v3
       with:
