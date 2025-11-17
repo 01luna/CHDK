@@ -25,6 +25,7 @@ jobs:
     - run: |
         echo guest|git svn fetch --username guest
         git clean -fd
+        git reset
         git rebase git-svn --force-rebase --autostash  
     - uses: actions/cache/save@v3
       with:
