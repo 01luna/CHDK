@@ -19,7 +19,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: .git
-        key: git-cache
+        key: g-cache
     - if: steps.load.outputs.cache-hit != 'true'
       run: git svn init https://subversion.assembla.com/svn/chdk/trunk/     
     - run: |
@@ -30,7 +30,7 @@ jobs:
     - uses: actions/cache/save@v3
       with:
         path: .git
-        key: git-cache
+        key: g-cache
     - uses: actions/checkout@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
